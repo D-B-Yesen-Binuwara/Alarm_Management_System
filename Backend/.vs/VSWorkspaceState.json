@@ -1,0 +1,17 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\INMS.API",
+    "\\INMS.API\\Controllers",
+    "\\INMS.Application",
+    "\\INMS.Application\\Services",
+    "\\INMS.Domain",
+    "\\INMS.Domain\\Entities",
+    "\\INMS.Infrastructure",
+    "\\INMS.Infrastructure\\obj",
+    "\\INMS.Infrastructure\\Persistence",
+    "\\INMS.Infrastructure\\Repositories"
+  ],
+  "SelectedNode": "\\INMS.API\\Controllers\\DeviceController.cs",
+  "PreviewInSolutionExplorer": false
+}
