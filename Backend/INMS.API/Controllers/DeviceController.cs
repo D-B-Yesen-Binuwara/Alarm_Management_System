@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using INM_FCS.Application.Interfaces;
-using INM_FCS.Domain.Entities;
+using INMS.Application.Interfaces;
+using INMS.Domain.Entities;
 
-namespace INM_FCS.API.Controllers
+namespace INMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

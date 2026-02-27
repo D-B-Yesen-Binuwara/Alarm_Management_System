@@ -1,15 +1,15 @@
-using INM_FCS.Application.Interfaces;
-using INM_FCS.Domain.Entities;
-using INM_FCS.Infrastructure.Data;
+using INMS.Application.Interfaces;
+using INMS.Domain.Entities;
+using INMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace INM_FCS.Application.Services
+namespace INMS.Application.Services
 {
     public class DeviceService : IDeviceService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly AppDbContext _context;
 
-        public DeviceService(ApplicationDbContext context)
+        public DeviceService(AppDbContext context)
         {
             _context = context;
         }

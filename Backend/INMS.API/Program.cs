@@ -3,6 +3,7 @@ using INMS.Infrastructure.Persistence;
 using INMS.Domain.Interfaces;
 using INMS.Infrastructure.Repositories;
 using INMS.Application.Services;
+using INMS.Application.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +12,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
-builder.Services.AddScoped<DeviceService>();
+builder.Services.AddScoped<IDeviceService, DeviceService>();
 
 builder.Services.AddControllers();
 

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace INM_FCS.Domain.Entities
+namespace INMS.Domain.Entities
 {
     public class Device
     {

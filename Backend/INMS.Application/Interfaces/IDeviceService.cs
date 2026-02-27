@@ -1,6 +1,6 @@
-using INM_FCS.Domain.Entities;
+using INMS.Domain.Entities;
 
-namespace INM_FCS.Application.Interfaces
+namespace INMS.Application.Interfaces
 {
     public interface IDeviceService
     {

@@ -1,7 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace INMS.Domain.Entities;
 
 public class RootCause
 {
+    [Key]
     public int RootCauseId { get; set; }
     public int AlarmId { get; set; }
     public int RootCauseDeviceId { get; set; }

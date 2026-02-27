@@ -10,3 +10,15 @@ Thumbs.db
 
 # Ignore environment variables
 .env
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build folders
+bin/
+obj/
+
+# Logs
+*.log
