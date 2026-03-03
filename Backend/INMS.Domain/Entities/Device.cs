@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using INMS.Domain.Enums;
 
 namespace INMS.Domain.Entities
 {
@@ -10,15 +11,15 @@ namespace INMS.Domain.Entities
 
         [Required]
         [MaxLength(100)]
-        public string DeviceName { get; set; }
+        public string DeviceName { get; set; } = string.Empty;
 
         [Required]
         [MaxLength(50)]
-        public string DeviceType { get; set; } // SLBN, CEAN, MSAN
+        public string DeviceType { get; set; } = string.Empty;
 
         [Required]
         [MaxLength(50)]
-        public string IP { get; set; }
+        public string IP { get; set; } = string.Empty;
 
         [Required]
         [MaxLength(20)]
@@ -26,11 +27,12 @@ namespace INMS.Domain.Entities
 
         [Required]
         [MaxLength(20)]
-        public string PriorityLevel { get; set; } = "Low";
+        public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.Low;
 
         [ForeignKey("LEA")]
         public int LEAId { get; set; }
 
+        // FK to User (Officer)
         public int? AssignedUserId { get; set; }
     }
 }

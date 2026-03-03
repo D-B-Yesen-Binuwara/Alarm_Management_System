@@ -31,5 +31,10 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ImpactedDevice>().ToTable("ImpactedDevice");
         modelBuilder.Entity<User>().ToTable("User");
         modelBuilder.Entity<Role>().ToTable("Role");
+
+        modelBuilder.Entity<Device>()
+        .Property(d => d.PriorityLevel)
+        .HasConversion<string>();
+        base.OnModelCreating(modelBuilder);
     }
 }
