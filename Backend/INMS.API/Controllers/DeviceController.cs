@@ -52,5 +52,17 @@ namespace INMS.API.Controllers
             if (!deleted) return NotFound();
             return NoContent();
         }
+
+        [HttpPatch("{id}/assign")]
+        public async Task<IActionResult> AssignDevice(int id, [FromBody] AssignDeviceRequest request)
+        {
+            await _deviceService.AssignDeviceAsync(id, request.UserId);
+            return Ok("Device assigned successfully");
+        }
+
+        public class AssignDeviceRequest
+        {
+            public int UserId { get; set; }
+        }
     }
 }

@@ -34,5 +34,6 @@ namespace INMS.Domain.Entities
 
         // FK to User (Officer)
         public int? AssignedUserId { get; set; }
+        public User AssignedUser { get; set; }
     }
 }

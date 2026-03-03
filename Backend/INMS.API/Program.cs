@@ -13,6 +13,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
+builder.Services.AddScoped<IDeviceLinkRepository, DeviceLinkRepository>();
+builder.Services.AddScoped<IDeviceLinkService, DeviceLinkService>();
 
 builder.Services.AddControllers();
 
@@ -28,7 +30,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.MapControllers();
 
 var summaries = new[]

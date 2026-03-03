@@ -78,5 +78,20 @@ namespace INMS.Application.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task AssignDeviceAsync(int deviceId, int userId)
+        {
+            var device = await _context.Devices.FindAsync(deviceId);
+            if (device == null)
+                throw new Exception("Device not found");
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                throw new Exception("User not found");
+
+            device.AssignedUserId = userId;
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

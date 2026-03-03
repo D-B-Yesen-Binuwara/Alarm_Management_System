@@ -9,11 +9,11 @@ public class AppDbContext : DbContext
         : base(options) { }
 
     public DbSet<Device> Devices { get; set; }
+    public DbSet<DeviceLink> DeviceLinks { get; set; }
     public DbSet<Region> Regions { get; set; }
     public DbSet<Province> Provinces { get; set; }
     public DbSet<LEA> LEAs { get; set; }
     public DbSet<Alarm> Alarms { get; set; }
-    public DbSet<DeviceLink> DeviceLinks { get; set; }
     public DbSet<RootCause> RootCauses { get; set; }
     public DbSet<ImpactedDevice> ImpactedDevices { get; set; }
     public DbSet<User> Users { get; set; }
@@ -36,5 +36,17 @@ public class AppDbContext : DbContext
         .Property(d => d.PriorityLevel)
         .HasConversion<string>();
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<DeviceLink>()
+            .HasOne(dl => dl.ParentDevice)
+            .WithMany()
+            .HasForeignKey(dl => dl.ParentDeviceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DeviceLink>()
+            .HasOne(dl => dl.ChildDevice)
+            .WithMany()
+            .HasForeignKey(dl => dl.ChildDeviceId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
