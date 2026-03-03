@@ -14,6 +14,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
 
+builder.Services.AddScoped<IAlarmRepository, AlarmRepository>();
+builder.Services.AddScoped<IAlarmService, AlarmService>();
+
+builder.Services.AddScoped<IHeartbeatRepository, HeartbeatRepository>();
+builder.Services.AddScoped<IHeartbeatService, HeartbeatService>();
+
+builder.Services.AddScoped<ISimulationEventRepository, SimulationEventRepository>();
+builder.Services.AddScoped<ISimulationEventService, SimulationEventService>();
+
 builder.Services.AddControllers();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

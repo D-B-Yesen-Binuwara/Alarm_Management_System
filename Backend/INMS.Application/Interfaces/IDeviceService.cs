@@ -1,13 +1,15 @@
 using INMS.Domain.Entities;
+using INMS.Domain.Enums;
 
 namespace INMS.Application.Interfaces
 {
     public interface IDeviceService
     {
         Task<IEnumerable<Device>> GetAllAsync();
-        Task<Device> GetByIdAsync(int id);
+        Task<Device?> GetByIdAsync(int id);
         Task<Device> CreateAsync(Device device);
-        Task<Device> UpdateAsync(int id, Device device);
+        Task<Device?> UpdateAsync(int id, Device device);
         Task<bool> DeleteAsync(int id);
+        Task<Device?> UpdateStatusAsync(int id, DeviceStatus status);
     }
 }

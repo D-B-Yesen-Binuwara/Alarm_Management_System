@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using INMS.Domain.Enums;
 
 namespace INMS.Domain.Entities
 {
@@ -21,12 +22,10 @@ namespace INMS.Domain.Entities
         public string IP { get; set; }
 
         [Required]
-        [MaxLength(20)]
-        public string Status { get; set; } = "UP";
+        public DeviceStatus Status { get; set; } = DeviceStatus.UP;
 
         [Required]
-        [MaxLength(20)]
-        public string PriorityLevel { get; set; } = "Low";
+        public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.LOW;
 
         [ForeignKey("LEA")]
         public int LEAId { get; set; }
