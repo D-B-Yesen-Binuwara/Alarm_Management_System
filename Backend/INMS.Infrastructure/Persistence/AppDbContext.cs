@@ -33,8 +33,13 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Role>().ToTable("Role");
 
         modelBuilder.Entity<Device>()
-        .Property(d => d.PriorityLevel)
-        .HasConversion<string>();
+            .Property(d => d.PriorityLevel)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<Device>()
+            .Property(d => d.DeviceType)
+            .HasConversion<string>();
+
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<DeviceLink>()

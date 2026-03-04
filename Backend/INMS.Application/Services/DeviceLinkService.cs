@@ -1,5 +1,6 @@
 using INMS.Application.Interfaces;
 using INMS.Domain.Entities;
+using INMS.Domain.Enums;
 using INMS.Domain.Interfaces;
 using INMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,10 @@ namespace INMS.Application.Services
             if (parent == null || child == null)
                 throw new Exception("Device not found");
 
+            // TOPOLOGY VALIDATION
+             if (!IsValidTopology(parent.DeviceType, child.DeviceType))
+                throw new Exception("Invalid topology: Parent-child relationship not allowed");
+
             var link = new DeviceLink
             {
                 ParentDeviceId = parentId,
@@ -46,6 +51,26 @@ namespace INMS.Application.Services
         public async Task DeleteLinkAsync(int id)
         {
             await _repository.DeleteAsync(id);
+        }
+
+        private bool IsValidTopology(DeviceType parentType, DeviceType childType)
+        {
+            switch (parentType)
+            {
+                case DeviceType.SLBN:
+                    return childType == DeviceType.SLBN
+                        || childType == DeviceType.CEAN;
+
+                case DeviceType.CEAN:
+                    return childType == DeviceType.MSAN
+                        || childType == DeviceType.Customer;
+
+                case DeviceType.MSAN:
+                    return childType == DeviceType.Customer;
+
+                default:
+                    return false;
+            }
         }
     }
 }

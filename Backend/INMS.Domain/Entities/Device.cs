@@ -14,8 +14,7 @@ namespace INMS.Domain.Entities
         public string DeviceName { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(50)]
-        public string DeviceType { get; set; } = string.Empty;
+        public DeviceType DeviceType { get; set; }
 
         [Required]
         [MaxLength(50)]
@@ -32,8 +31,7 @@ namespace INMS.Domain.Entities
         [ForeignKey("LEA")]
         public int LEAId { get; set; }
 
-        // FK to User (Officer)
         public int? AssignedUserId { get; set; }
-        public User AssignedUser { get; set; }
+        public User? AssignedUser { get; set; }
     }
 }
