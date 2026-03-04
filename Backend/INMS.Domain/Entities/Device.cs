@@ -1,15 +1,39 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using INMS.Domain.Enums;
 
-namespace INMS.Domain.Entities;
-
-public class Device
+namespace INMS.Domain.Entities
 {
-    public int DeviceId { get; set; }
-    public string DeviceName { get; set; }
-    public DeviceType DeviceType { get; set; }
-    public string IP { get; set; }
-    public DeviceStatus Status { get; set; }
-    public PriorityLevel PriorityLevel { get; set; }
-    public int LEAId { get; set; }
-    public int? AssignedUserId { get; set; }
+    public class Device
+    {
+        [Key]
+        public int DeviceId { get; set; }
+
+        [Required]
+        [MaxLength(100)]
+        public string DeviceName { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(50)]
+        public string DeviceType { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(50)]
+        public string IP { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(20)]
+        public string Status { get; set; } = "UP";
+
+        [Required]
+        [MaxLength(20)]
+        public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.Low;
+
+        [ForeignKey("LEA")]
+        public int LEAId { get; set; }
+
+        // FK to User (Officer)
+        public int? AssignedUserId { get; set; }
+        public User AssignedUser { get; set; }
+    }
 }

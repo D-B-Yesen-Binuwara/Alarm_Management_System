@@ -1,24 +1,97 @@
+using INMS.Application.Interfaces;
 using INMS.Domain.Entities;
-using INMS.Domain.Interfaces;
+using INMS.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
-namespace INMS.Application.Services;
-
-public class DeviceService
+namespace INMS.Application.Services
 {
-    private readonly IDeviceRepository _repository;
-
-    public DeviceService(IDeviceRepository repository)
+    public class DeviceService : IDeviceService
     {
-        _repository = repository;
-    }
+        private readonly AppDbContext _context;
 
-    public async Task<List<Device>> GetAllDevices()
-    {
-        return await _repository.GetAllAsync();
-    }
+        public DeviceService(AppDbContext context)
+        {
+            _context = context;
+        }
 
-    public async Task<Device> GetDeviceById(int id)
-    {
-        return await _repository.GetByIdAsync(id);
+        public async Task<IEnumerable<Device>> GetAllAsync()
+        {
+            return await _context.Devices.ToListAsync();
+        }
+
+        public async Task<Device> GetByIdAsync(int id)
+        {
+            return await _context.Devices.FindAsync(id);
+        }
+
+        public async Task<Device> CreateAsync(Device device)
+        {
+            // Validate Assigned User
+            if (device.AssignedUserId.HasValue)
+            {
+                var userExists = await _context.Users
+                    .AnyAsync(u => u.UserId == device.AssignedUserId.Value);
+
+                if (!userExists)
+                    throw new Exception("Assigned user does not exist.");
+            }
+
+            _context.Devices.Add(device);
+            await _context.SaveChangesAsync();
+
+            return device;
+        }
+
+        public async Task<Device> UpdateAsync(int id, Device device)
+        {
+            var existing = await _context.Devices.FindAsync(id);
+            if (existing == null) return null;
+
+            // Validate user again
+            if (device.AssignedUserId.HasValue)
+            {
+                var userExists = await _context.Users
+                    .AnyAsync(u => u.UserId == device.AssignedUserId.Value);
+
+                if (!userExists)
+                    throw new Exception("Assigned user does not exist.");
+            }
+
+            existing.DeviceName = device.DeviceName;
+            existing.DeviceType = device.DeviceType;
+            existing.IP = device.IP;
+            existing.Status = device.Status;
+            existing.PriorityLevel = device.PriorityLevel;
+            existing.LEAId = device.LEAId;
+            existing.AssignedUserId = device.AssignedUserId;
+
+            await _context.SaveChangesAsync();
+            return existing;
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var device = await _context.Devices.FindAsync(id);
+            if (device == null) return false;
+
+            _context.Devices.Remove(device);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task AssignDeviceAsync(int deviceId, int userId)
+        {
+            var device = await _context.Devices.FindAsync(deviceId);
+            if (device == null)
+                throw new Exception("Device not found");
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                throw new Exception("User not found");
+
+            device.AssignedUserId = userId;
+
+            await _context.SaveChangesAsync();
+        }
     }
 }
