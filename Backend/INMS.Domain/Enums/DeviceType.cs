@@ -2,8 +2,8 @@ namespace INMS.Domain.Enums;
 
 public enum DeviceType
 {
-    SLBN,
-    CEAN,
-    MSAN,
-    CUSTOMER
+    SLBN = 0,
+    CEAN = 1,
+    MSAN = 2,
+    Customer = 3
 }
