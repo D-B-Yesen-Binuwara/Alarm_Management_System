@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.API\\INMS.API.csproj": {}
+    "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.API\\INMS.API.csproj": {}
   },
   "projects": {
-    "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.API\\INMS.API.csproj": {
+    "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.API\\INMS.API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.API\\INMS.API.csproj",
+        "projectUniqueName": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.API\\INMS.API.csproj",
         "projectName": "INMS.API",
-        "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.API\\INMS.API.csproj",
-        "packagesPath": "C:\\Users\\yesen\\.nuget\\packages\\",
-        "outputPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.API\\obj\\",
+        "projectPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.API\\INMS.API.csproj",
+        "packagesPath": "C:\\Users\\Thulasi\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.API\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\yesen\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Thulasi\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,17 +26,15 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj": {
-                "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj"
-              },
-              "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj": {
-                "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj"
+              "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj"
               }
             }
           }
@@ -51,16 +49,12 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
-            "Microsoft.AspNetCore.OpenApi": {
-              "target": "Package",
-              "version": "[9.0.8, )"
-            },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[10.1.4, )"
@@ -85,24 +79,24 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj": {
+    "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj",
+        "projectUniqueName": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj",
         "projectName": "INMS.Application",
-        "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj",
-        "packagesPath": "C:\\Users\\yesen\\.nuget\\packages\\",
-        "outputPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\obj\\",
+        "projectPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj",
+        "packagesPath": "C:\\Users\\Thulasi\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Application\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\yesen\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Thulasi\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -111,14 +105,15 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
-                "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj"
+              "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
+                "projectPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj"
               }
             }
           }
@@ -133,7 +128,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -154,24 +149,24 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
+    "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj",
+        "projectUniqueName": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj",
         "projectName": "INMS.Domain",
-        "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj",
-        "packagesPath": "C:\\Users\\yesen\\.nuget\\packages\\",
-        "outputPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\obj\\",
+        "projectPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj",
+        "packagesPath": "C:\\Users\\Thulasi\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Domain\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\yesen\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Thulasi\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -180,6 +175,7 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -198,7 +194,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -219,24 +215,24 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj": {
+    "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj",
+        "projectUniqueName": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj",
         "projectName": "INMS.Infrastructure",
-        "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj",
-        "packagesPath": "C:\\Users\\yesen\\.nuget\\packages\\",
-        "outputPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\obj\\",
+        "projectPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\Thulasi\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\yesen\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Thulasi\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -245,17 +241,18 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj": {
-                "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj"
+              "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj": {
+                "projectPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj"
               },
-              "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
-                "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj"
+              "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
+                "projectPath": "C:\\Users\\Thulasi\\Desktop\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj"
               }
             }
           }
@@ -270,11 +267,21 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.SqlServer": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -291,7 +298,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

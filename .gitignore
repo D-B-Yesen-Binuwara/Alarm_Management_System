@@ -1,12 +1,21 @@
-# Ignore node_modules folder
-node_modules/
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
 
-# Ignore build output
-dist/
+# Build folders
+bin/
+obj/
 
-# Ignore system files
+# Logs
+*.log
+
+# Database
+*.mdf
+*.ldf
+
+# OS files
 .DS_Store
 Thumbs.db
-
-# Ignore environment variables
-.env

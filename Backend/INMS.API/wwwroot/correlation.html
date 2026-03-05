@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Integrated NMS - Correlation</title>
+
+    <link rel="stylesheet" href="css/main.css">
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial;
+            background: #f4f6fb;
+        }
+
+        /* TOP BAR */
+
+        .topbar {
+            background: #4a64a8;
+            color: white;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            .logo img {
+                height: 30px;
+            }
+
+        .logout-btn {
+            background: #ff5a4d;
+            border: none;
+            padding: 6px 14px;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* SIDEBAR */
+
+        .sidebar {
+            width: 220px;
+            background: #f1f2f7;
+            position: fixed;
+            top: 60px;
+            bottom: 0;
+        }
+
+            .sidebar a {
+                display: block;
+                padding: 14px 22px;
+                text-decoration: none;
+                color: #333;
+            }
+
+                .sidebar a:hover {
+                    background: #e5e9ff;
+                }
+
+        .active {
+            background: #dbe1ff;
+            border-left: 4px solid #4a64a8;
+        }
+
+        /* MAIN */
+
+        .main {
+            margin-left: 220px;
+            margin-top: 60px;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* CARD */
+
+        .card {
+            width: 520px;
+            background: white;
+            padding: 35px;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+            .card h2 {
+                margin-bottom: 25px;
+            }
+
+        /* INPUT */
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        select {
+            padding: 7px;
+            width: 160px;
+        }
+
+        /* BUTTON */
+
+        button.run {
+            background: #4a64a8;
+            border: none;
+            padding: 8px 16px;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+            button.run:hover {
+                background: #3c5190;
+            }
+
+        /* RESULT BOX */
+
+        .result-box {
+            background: #e7ebff;
+            padding: 18px;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+
+            .result-box p {
+                margin: 8px 0;
+            }
+
+        /* STATUS */
+
+        .status-down {
+            background: #e74c3c;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        /* SEVERITY */
+
+        .severity-critical {
+            background: #e74c3c;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- TOP BAR -->
+
+    <div class="topbar">
+
+        <div class="logo">
+            <img src="images/slt.png">
+            <h3>Integrated NMS</h3>
+        </div>
+
+        <div>
+            Welcome Admin
+            <button class="logout-btn">Logout</button>
+        </div>
+
+    </div>
+
+
+    <!-- SIDEBAR -->
+
+    <div class="sidebar">
+
+        <a href="#">Dashboard</a>
+        <a href="#">Network Topology</a>
+        <a href="#">Alarm Monitoring</a>
+        <a href="correlation.html" class="active">Correlation</a>
+        <a href="impact.html">Impact Analysis</a>
+        <a href="#">Impact Reports</a>
+        <a href="graph.html">Graph Building</a>
+        <a href="traversal.html">Traversal (DFS/BFS)</a>
+        <a href="#">Notifications</a>
+        <a href="#">Admin Management</a>
+        <a href="#">Audit Logs</a>
+        <a href="#">User Profile</a>
+
+    </div>
+
+
+    <!-- MAIN -->
+
+    <div class="main">
+
+        <div class="card">
+
+            <h2>Run Correlation</h2>
+
+            <div class="input-row">
+
+                <label>Select Alarm Device</label>
+
+                <select id="deviceSelect">
+                    <option value="1">SLBN-01</option>
+                    <option value="2">CEAN-01</option>
+                    <option value="3">MSAN-01</option>
+                    <option value="4">CUSTOMER-01</option>
+                </select>
+
+                <button class="run" onclick="runCorrelation()">Run Correlation</button>
+
+            </div>
+
+            <div class="result-box">
+
+                <p><b>Alarm Device :</b> <span id="alarmDevice">-</span></p>
+
+                <p><b>Root Cause Device :</b> <span id="rootDevice">-</span></p>
+
+                <p><b>Correlation Path :</b> <span id="path">-</span></p>
+
+                <p><b>Device Status :</b> <span id="status">-</span></p>
+
+                <p><b>Alarm Severity :</b> <span id="severity">-</span></p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        function runCorrelation() {
+
+            const deviceId = document.getElementById("deviceSelect").value;
+
+            fetch(`/api/correlation/${deviceId}`)
+                .then(res => res.json())
+                .then(data => {
+
+                    document.getElementById("alarmDevice").innerText = data.alarmDevice;
+
+                    document.getElementById("rootDevice").innerText = data.rootCause;
+
+                    /* FIXED PATH */
+
+                    if (data.path) {
+
+                        let pathText = data.path.join(" -> ");
+
+                        document.getElementById("path").innerText = pathText;
+
+                    }
+
+                    /* STATUS */
+
+                    const status = document.getElementById("status");
+                    status.innerText = "DOWN";
+                    status.className = "status-down";
+
+                    /* SEVERITY */
+
+                    const severity = document.getElementById("severity");
+                    severity.innerText = "CRITICAL";
+                    severity.className = "severity-critical";
+
+                })
+                .catch(error => {
+
+                    alert("Correlation failed");
+
+                    console.log(error);
+
+                });
+
+        }
+
+    </script>
+
+</body>
+</html>

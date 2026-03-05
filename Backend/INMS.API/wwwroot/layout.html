@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Integrated NMS</title>
+    <link rel="stylesheet" href="css/main.css">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial;
+        }
+
+        .topbar {
+            background: #4a64a8;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            .logo-section img {
+                width: 40px;
+            }
+
+        .logout-btn {
+            background: #ff5a4d;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .sidebar {
+            width: 220px;
+            height: 100vh;
+            background: #f1f1f1;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            padding-top: 20px;
+        }
+
+            .sidebar a {
+                display: block;
+                padding: 12px 20px;
+                text-decoration: none;
+                color: #333;
+            }
+
+                .sidebar a:hover {
+                    background: #e1e6f7;
+                }
+
+        .main {
+            margin-left: 220px;
+            margin-top: 60px;
+            padding: 30px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+
+        <div class="logo-section">
+            <img src="images/slt.png">
+            <h3>Integrated NMS</h3>
+        </div>
+
+        <div>
+            Welcome Admin
+            <button class="logout-btn">Logout</button>
+        </div>
+
+    </div>
+
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+        <a href="#" onclick="loadPage('correlation.html')">Correlation</a>
+
+        <a href="#" onclick="loadPage('impact.html')">Impact Analysis</a>
+
+        <a href="#" onclick="loadPage('graph.html')">Graph Building</a>
+
+        <a href="#" onclick="loadPage('traversal.html')">Traversal (DFS/BFS)</a>
+
+    </div>
+
+
+    <!-- MAIN CONTENT -->
+    <div class="main" id="content">
+
+        <h2>Welcome to Integrated NMS</h2>
+        <p>Select a module from the sidebar.</p>
+
+    </div>
+
+
+    <!-- JAVASCRIPT PAGE LOADER -->
+    <script>
+
+function loadPage(page)
+{
+    fetch(page)
+    .then(response => response.text())
+    .then(html =>
+    {
+        document.getElementById("content").innerHTML = html;
+    });
+}
+
+    </script>
+
+
+</body>
+</html>

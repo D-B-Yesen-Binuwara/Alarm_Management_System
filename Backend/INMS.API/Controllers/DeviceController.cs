@@ -1,32 +1,32 @@
 using Microsoft.AspNetCore.Mvc;
-using INMS.Application.Services;
+using INMS.Infrastructure.Persistence;
+using System.Linq;
 
-namespace INMS.API.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-public class DeviceController : ControllerBase
+namespace INMS.API.Controllers
 {
-    private readonly DeviceService _deviceService;
-
-    public DeviceController(DeviceService deviceService)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class DeviceController : ControllerBase
     {
-        _deviceService = deviceService;
-    }
+        private readonly AppDbContext _context;
 
-    [HttpGet]
-    public async Task<IActionResult> Get()
-    {
-        var devices = await _deviceService.GetAllDevices();
-        return Ok(devices);
-    }
+        public DeviceController(AppDbContext context)
+        {
+            _context = context;
+        }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
-    {
-        var device = await _deviceService.GetDeviceById(id);
-        if (device == null)
-            return NotFound();
-        return Ok(device);
+        [HttpGet]
+        public IActionResult GetDevices()
+        {
+            var devices = _context.Devices
+                .Select(d => new
+                {
+                    id = d.DeviceId,
+                    name = d.DeviceName
+                })
+                .ToList();
+
+            return Ok(devices);
+        }
     }
 }

@@ -1,15 +1,26 @@
-using INMS.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-namespace INMS.Domain.Entities;
-
-public class Device
+namespace INMS.Domain.Entities
 {
-    public int DeviceId { get; set; }
-    public string DeviceName { get; set; }
-    public DeviceType DeviceType { get; set; }
-    public string IP { get; set; }
-    public DeviceStatus Status { get; set; }
-    public PriorityLevel PriorityLevel { get; set; }
-    public int LEAId { get; set; }
-    public int? AssignedUserId { get; set; }
+    [Table("Device")]
+    public class Device
+    {
+        [Key]
+        public int DeviceId { get; set; }
+
+        public string DeviceName { get; set; }
+
+        public string DeviceType { get; set; }
+
+        public string IP { get; set; }
+
+        public string Status { get; set; }
+
+        public string PriorityLevel { get; set; }
+
+        public int LEAId { get; set; }
+
+        public int? AssignedUserId { get; set; }
+    }
 }
