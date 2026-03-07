@@ -1,0 +1,103 @@
+<!-- TOP BAR -->
+
+<div class="topbar">
+
+  <div class="logo">
+    <img src="assets/slt.png" alt="logo">
+    <h3>Integrated NMS</h3>
+  </div>
+
+  <div>
+    Welcome Admin
+    <button class="logout-btn">Logout</button>
+  </div>
+
+</div>
+
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+  <a href="#">Dashboard</a>
+  <a href="#">Network Topology</a>
+  <a href="#">Alarm Monitoring</a>
+  <a class="active">Correlation</a>
+  <a href="#">Impact Analysis</a>
+  <a href="#">Impact Reports</a>
+  <a href="#">Graph Building</a>
+  <a href="#">Traversal (DFS/BFS)</a>
+  <a href="#">Notifications</a>
+  <a href="#">Admin Management</a>
+  <a href="#">Audit Logs</a>
+  <a href="#">User Profile</a>
+
+</div>
+
+
+<!-- MAIN CONTENT -->
+
+<div class="main">
+
+  <div class="card">
+
+    <h2>Run Correlation</h2>
+
+    <div class="input-row">
+
+      <label>Select Alarm Device</label>
+
+      <select [(ngModel)]="deviceId">
+
+        <option value="1">SLBN-01</option>
+        <option value="2">CEAN-01</option>
+        <option value="3">MSAN-01</option>
+        <option value="4">CUSTOMER-01</option>
+
+      </select>
+
+      <button class="run" (click)="runCorrelation()">
+        Run Correlation
+      </button>
+
+    </div>
+
+
+    <!-- RESULT -->
+
+    <div class="result-box">
+
+      <p>
+        <b>Alarm Device :</b>
+        {{ alarmDevice || '-' }}
+      </p>
+
+      <p>
+        <b>Root Cause Device :</b>
+        {{ rootDevice || '-' }}
+      </p>
+
+      <p>
+        <b>Correlation Path :</b>
+        {{ path || '-' }}
+      </p>
+
+      <p>
+        <b>Device Status :</b>
+        <span class="status-down" *ngIf="status">
+          {{ status }}
+        </span>
+      </p>
+
+      <p>
+        <b>Alarm Severity :</b>
+        <span class="severity-critical" *ngIf="severity">
+          {{ severity }}
+        </span>
+      </p>
+
+    </div>
+
+  </div>
+
+</div>

@@ -11,6 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\INMS.Application\INMS.Application.csproj" />
+    <ProjectReference Include="..\INMS.Domain\INMS.Domain.csproj" />
     <ProjectReference Include="..\INMS.Infrastructure\INMS.Infrastructure.csproj" />
   </ItemGroup>
 

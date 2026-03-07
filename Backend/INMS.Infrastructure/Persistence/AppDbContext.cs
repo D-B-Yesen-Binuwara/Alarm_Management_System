@@ -11,7 +11,7 @@ namespace INMS.Infrastructure.Persistence
         }
 
         public DbSet<Device> Devices { get; set; }
+
         public DbSet<DeviceLink> DeviceLinks { get; set; }
-        public DbSet<Alarm> Alarms { get; set; }
     }
 }

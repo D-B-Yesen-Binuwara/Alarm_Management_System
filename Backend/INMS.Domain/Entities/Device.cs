@@ -19,8 +19,8 @@ namespace INMS.Domain.Entities
 
         public string PriorityLevel { get; set; }
 
-        public int LEAId { get; set; }
+        public int? LEAId { get; set; }           // nullable
 
-        public int? AssignedUserId { get; set; }
+        public int? AssignedUserId { get; set; }  // nullable
     }
 }

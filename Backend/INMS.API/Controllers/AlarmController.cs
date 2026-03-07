@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using INMS.Application.Services;
 using INMS.Infrastructure.Services;
 
 namespace INMS.API.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class AlarmController : ControllerBase
     {
         private readonly CorrelationService _correlationService;
@@ -18,20 +19,17 @@ namespace INMS.API.Controllers
             _impactService = impactService;
         }
 
-        // Example: api/alarm/5
         [HttpGet("{deviceId}")]
         public IActionResult ProcessAlarm(int deviceId)
         {
-            // Step 1: Find root cause
-            var rootCauseId = _correlationService.FindRootCause(deviceId);
+            var rootCause = _correlationService.FindRootCause(deviceId);
 
-            // Step 2: Find impacted devices
-            var impactedDevices = _impactService.GetDirectImpacts(rootCauseId);
+            var impactedDevices = _impactService.GetDirectImpacts(rootCause);
 
             return Ok(new
             {
                 AlarmDevice = deviceId,
-                RootCauseDevice = rootCauseId,
+                RootCauseDevice = rootCause,
                 ImpactedDevices = impactedDevices
             });
         }

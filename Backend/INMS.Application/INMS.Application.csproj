@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\INMS.Domain\INMS.Domain.csproj" />
+    <Folder Include="Interfaces\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Interfaces\" />
+    <ProjectReference Include="..\INMS.Domain\INMS.Domain.csproj" />
+    <ProjectReference Include="..\INMS.Infrastructure\INMS.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -1,7 +1,5 @@
 ﻿using INMS.Infrastructure.Persistence;
 using INMS.Domain.Entities;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace INMS.Infrastructure.Services
 {
@@ -21,9 +19,11 @@ namespace INMS.Infrastructure.Services
                 .Select(x => x.ChildDeviceId)
                 .ToList();
 
-            return _context.Devices
+            var impactedDevices = _context.Devices
                 .Where(d => childIds.Contains(d.DeviceId))
                 .ToList();
+
+            return impactedDevices;
         }
     }
 }

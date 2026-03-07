@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\INMS.Domain\INMS.Domain.csproj" />
-    <ProjectReference Include="..\INMS.Application\INMS.Application.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

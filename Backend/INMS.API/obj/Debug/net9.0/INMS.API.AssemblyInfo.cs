@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("INMS.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e859cddd87b882119a94601ab4fccccb75634262")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+09a92845deaa1d244289f6a31bf1461b387c0e83")]
 [assembly: System.Reflection.AssemblyProductAttribute("INMS.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("INMS.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

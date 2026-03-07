@@ -1,35 +1,26 @@
-﻿using System.Collections.Generic;
-using INMS.Application.Models;
+﻿using INMS.Infrastructure.Persistence;
+using System.Linq;
 
 namespace INMS.Application.Services
 {
     public class CorrelationService
     {
-        private Dictionary<int, int> parentMap = new Dictionary<int, int>()
+        private readonly AppDbContext _context;
+
+        public CorrelationService(AppDbContext context)
         {
-            {2,1},
-            {3,2},
-            {4,3}
-        };
+            _context = context;
+        }
 
-        public CorrelationResult FindRootCause(int deviceId)
+        public int FindRootCause(int deviceId)
         {
-            List<int> path = new List<int>();
-            int current = deviceId;
+            var link = _context.DeviceLinks
+                .FirstOrDefault(x => x.ChildDeviceId == deviceId);
 
-            path.Add(current);
+            if (link == null)
+                return deviceId;
 
-            while (parentMap.ContainsKey(current))
-            {
-                current = parentMap[current];
-                path.Add(current);
-            }
-
-            return new CorrelationResult
-            {
-                RootCauseDevice = current,
-                Path = path
-            };
+            return FindRootCause(link.ParentDeviceId);
         }
     }
 }
