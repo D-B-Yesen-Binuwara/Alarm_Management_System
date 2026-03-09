@@ -4,6 +4,7 @@ using INMS.Domain.Interfaces;
 using INMS.Infrastructure.Repositories;
 using INMS.Application.Services;
 using INMS.Application.Interfaces;
+using INMS.API.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,10 @@ builder.Services.AddScoped<IHeartbeatService, HeartbeatService>();
 
 builder.Services.AddScoped<ISimulationEventRepository, SimulationEventRepository>();
 builder.Services.AddScoped<ISimulationEventService, SimulationEventService>();
+
+// Background Services
+builder.Services.AddHostedService<HeartbeatSchedulerService>();
+builder.Services.AddHostedService<HeartbeatFailureDetectionService>();
 
 builder.Services.AddControllers();
 
