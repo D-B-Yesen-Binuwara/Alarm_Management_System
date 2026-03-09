@@ -30,7 +30,7 @@ public class AlarmService : IAlarmService
 
     public async Task<Alarm> CreateAsync(Alarm alarm)
     {
-        alarm.RaisedTime = DateTime.Now;
+        alarm.RaisedTime = DateTime.UtcNow;
         alarm.IsActive = true;
         return await _repository.AddAsync(alarm);
     }

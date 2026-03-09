@@ -19,7 +19,7 @@ public class HeartbeatService : IHeartbeatService
         {
             DeviceId = deviceId,
             Status = status,
-            Timestamp = DateTime.Now
+            Timestamp = DateTime.UtcNow
         };
 
         return await _repository.AddAsync(heartbeat);

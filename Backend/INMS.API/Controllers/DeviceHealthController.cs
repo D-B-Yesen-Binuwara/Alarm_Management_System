@@ -31,9 +31,9 @@ public class DeviceHealthController : ControllerBase
             Status = device.Status.ToString(),
             LastHeartbeat = latestHeartbeat?.Timestamp,
             TimeSinceLastHeartbeat = latestHeartbeat != null 
-                ? (double?)(DateTime.Now - latestHeartbeat.Timestamp).TotalSeconds 
+                ? (double?)(DateTime.UtcNow - latestHeartbeat.Timestamp).TotalSeconds 
                 : (double?)null,
-            IsHealthy = latestHeartbeat != null && (DateTime.Now - latestHeartbeat.Timestamp).TotalSeconds < 90
+            IsHealthy = latestHeartbeat != null && (DateTime.UtcNow - latestHeartbeat.Timestamp).TotalSeconds < 90
         };
 
         return Ok(healthStatus);

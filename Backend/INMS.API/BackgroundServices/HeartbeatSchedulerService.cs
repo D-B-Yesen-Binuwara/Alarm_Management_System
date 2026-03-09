@@ -8,6 +8,7 @@ public class HeartbeatSchedulerService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<HeartbeatSchedulerService> _logger;
     private const int HeartbeatIntervalSeconds = 30;
+    private static readonly Random _random = new Random();
 
     public HeartbeatSchedulerService(
         IServiceProvider serviceProvider,
@@ -43,16 +44,28 @@ public class HeartbeatSchedulerService : BackgroundService
         var heartbeatService = scope.ServiceProvider.GetRequiredService<IHeartbeatService>();
 
         var devices = await deviceService.GetAllAsync();
+        int respondedCount = 0;
 
         foreach (var device in devices)
         {
             if (device.Status == DeviceStatus.UP)
             {
-                await heartbeatService.RecordHeartbeatAsync(device.DeviceId, "UP");
-                _logger.LogDebug($"Heartbeat recorded for device {device.DeviceId}");
+                // Simulate 90% success rate (10% packet loss)
+                bool responded = _random.Next(0, 100) > 10;
+
+                if (responded)
+                {
+                    await heartbeatService.RecordHeartbeatAsync(device.DeviceId, "UP");
+                    respondedCount++;
+                    _logger.LogDebug($"Heartbeat recorded for device {device.DeviceId}");
+                }
+                else
+                {
+                    _logger.LogDebug($"Device {device.DeviceId} did not respond (simulated packet loss)");
+                }
             }
         }
 
-        _logger.LogInformation($"Heartbeat check completed for {devices.Count()} devices");
+        _logger.LogInformation($"Heartbeat check completed: {respondedCount}/{devices.Count()} devices responded");
     }
 }

@@ -47,7 +47,7 @@ public class HeartbeatFailureDetectionService : BackgroundService
         var simulationEventService = scope.ServiceProvider.GetRequiredService<ISimulationEventService>();
 
         var devices = await deviceService.GetAllAsync();
-        var currentTime = DateTime.Now;
+        var currentTime = DateTime.UtcNow;
 
         foreach (var device in devices)
         {

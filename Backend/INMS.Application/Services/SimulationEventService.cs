@@ -19,7 +19,7 @@ public class SimulationEventService : ISimulationEventService
         {
             DeviceId = deviceId,
             EventType = eventType,
-            EventTime = DateTime.Now
+            EventTime = DateTime.UtcNow
         };
 
         return await _repository.AddAsync(simulationEvent);
