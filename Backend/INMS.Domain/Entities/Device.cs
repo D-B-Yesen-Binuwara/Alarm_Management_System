@@ -33,5 +33,7 @@ namespace INMS.Domain.Entities
 
         public int? AssignedUserId { get; set; }
         public User? AssignedUser { get; set; }
+
+        public bool IsSimulatedDown { get; set; } = false;
     }
 }
