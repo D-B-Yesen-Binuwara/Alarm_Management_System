@@ -93,6 +93,7 @@ namespace INMS.Application.Services
             device.AssignedUserId = userId;
 
             await _context.SaveChangesAsync();
+        }
         public async Task<Device?> UpdateStatusAsync(int id, DeviceStatus status)
         {
             var device = await _context.Devices.FindAsync(id);

@@ -24,7 +24,7 @@ namespace INMS.Domain.Entities
         public DeviceStatus Status { get; set; } = DeviceStatus.UP;
 
         [Required]
-        public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.LOW;
+        public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.Low;
 
         [ForeignKey("LEA")]
         public int LEAId { get; set; }
