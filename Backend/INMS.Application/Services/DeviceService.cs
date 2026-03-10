@@ -1,5 +1,6 @@
 using INMS.Application.Interfaces;
 using INMS.Domain.Entities;
+using INMS.Domain.Enums;
 using INMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,7 @@ namespace INMS.Application.Services
             return await _context.Devices.ToListAsync();
         }
 
-        public async Task<Device> GetByIdAsync(int id)
+        public async Task<Device?> GetByIdAsync(int id)
         {
             return await _context.Devices.FindAsync(id);
         }
@@ -42,7 +43,7 @@ namespace INMS.Application.Services
             return device;
         }
 
-        public async Task<Device> UpdateAsync(int id, Device device)
+        public async Task<Device?> UpdateAsync(int id, Device device)
         {
             var existing = await _context.Devices.FindAsync(id);
             if (existing == null) return null;
@@ -92,6 +93,14 @@ namespace INMS.Application.Services
             device.AssignedUserId = userId;
 
             await _context.SaveChangesAsync();
+        public async Task<Device?> UpdateStatusAsync(int id, DeviceStatus status)
+        {
+            var device = await _context.Devices.FindAsync(id);
+            if (device == null) return null;
+
+            device.Status = status;
+            await _context.SaveChangesAsync();
+            return device;
         }
     }
 }

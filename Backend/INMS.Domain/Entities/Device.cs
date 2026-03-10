@@ -21,12 +21,10 @@ namespace INMS.Domain.Entities
         public string IP { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(20)]
-        public string Status { get; set; } = "UP";
+        public DeviceStatus Status { get; set; } = DeviceStatus.UP;
 
         [Required]
-        [MaxLength(20)]
-        public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.Low;
+        public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.LOW;
 
         [ForeignKey("LEA")]
         public int LEAId { get; set; }

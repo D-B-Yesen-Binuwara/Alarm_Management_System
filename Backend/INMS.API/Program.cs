@@ -4,6 +4,7 @@ using INMS.Domain.Interfaces;
 using INMS.Infrastructure.Repositories;
 using INMS.Application.Services;
 using INMS.Application.Interfaces;
+using INMS.API.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,19 @@ builder.Services.AddScoped<IDeviceLinkRepository, DeviceLinkRepository>();
 builder.Services.AddScoped<IDeviceLinkService, DeviceLinkService>();
 builder.Services.AddScoped<IRegionRepository, RegionRepository>();
 builder.Services.AddScoped<IRegionService, RegionService>();
+
+builder.Services.AddScoped<IAlarmRepository, AlarmRepository>();
+builder.Services.AddScoped<IAlarmService, AlarmService>();
+
+builder.Services.AddScoped<IHeartbeatRepository, HeartbeatRepository>();
+builder.Services.AddScoped<IHeartbeatService, HeartbeatService>();
+
+builder.Services.AddScoped<ISimulationEventRepository, SimulationEventRepository>();
+builder.Services.AddScoped<ISimulationEventService, SimulationEventService>();
+
+// Background Services
+builder.Services.AddHostedService<HeartbeatSchedulerService>();
+builder.Services.AddHostedService<HeartbeatFailureDetectionService>();
 
 builder.Services.AddControllers();
 
