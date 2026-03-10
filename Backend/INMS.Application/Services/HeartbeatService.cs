@@ -34,4 +34,9 @@ public class HeartbeatService : IHeartbeatService
     {
         return await _repository.GetLatestByDeviceIdAsync(deviceId);
     }
+
+    public async Task<Dictionary<int, Heartbeat>> GetLatestHeartbeatsForAllDevicesAsync()
+    {
+        return await _repository.GetLatestHeartbeatsForAllDevicesAsync();
+    }
 }
