@@ -54,6 +54,39 @@ namespace INMS.API.Controllers
             return NoContent();
         }
 
+        [HttpPatch("{id}/assign")]
+        public async Task<IActionResult> AssignDevice(int id, [FromBody] AssignDeviceRequest request)
+        {
+            await _deviceService.AssignDeviceAsync(id, request.UserId);
+            return Ok("Device assigned successfully");
+        }
+
+        [HttpPost("{id}/simulate-failure")]
+        public async Task<IActionResult> SimulateFailure(int id)
+        {
+            var device = await _deviceService.GetByIdAsync(id);
+            if (device == null) return NotFound();
+            
+            device.IsSimulatedDown = true;
+            await _deviceService.UpdateAsync(id, device);
+            return Ok(new { message = "Device failure simulation started", deviceId = id });
+        }
+
+        [HttpPost("{id}/recover")]
+        public async Task<IActionResult> Recover(int id)
+        {
+            var device = await _deviceService.GetByIdAsync(id);
+            if (device == null) return NotFound();
+            
+            device.IsSimulatedDown = false;
+            await _deviceService.UpdateAsync(id, device);
+            return Ok(new { message = "Device recovery simulation started", deviceId = id });
+        }
+
+        public class AssignDeviceRequest
+        {
+            public int UserId { get; set; }
+        }
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest request)
         {

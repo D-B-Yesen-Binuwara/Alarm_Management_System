@@ -8,7 +8,6 @@ public class HeartbeatSchedulerService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<HeartbeatSchedulerService> _logger;
     private const int HeartbeatIntervalSeconds = 30;
-    private static readonly Random _random = new Random();
 
     public HeartbeatSchedulerService(
         IServiceProvider serviceProvider,
@@ -48,22 +47,17 @@ public class HeartbeatSchedulerService : BackgroundService
 
         foreach (var device in devices)
         {
-            if (device.Status == DeviceStatus.UP)
+            if (device.IsSimulatedDown)
             {
-                // Simulate 90% success rate (10% packet loss)
-                bool responded = _random.Next(0, 100) > 10;
-
-                if (responded)
-                {
-                    await heartbeatService.RecordHeartbeatAsync(device.DeviceId, "UP");
-                    respondedCount++;
-                    _logger.LogDebug($"Heartbeat recorded for device {device.DeviceId}");
-                }
-                else
-                {
-                    _logger.LogDebug($"Device {device.DeviceId} did not respond (simulated packet loss)");
-                }
+                _logger.LogDebug($"Device {device.DeviceId} is simulated down - skipping heartbeat");
+                continue;
             }
+
+            // Record heartbeat regardless of current status
+            // This allows automatic recovery detection
+            await heartbeatService.RecordHeartbeatAsync(device.DeviceId, "UP");
+            respondedCount++;
+            _logger.LogDebug($"Heartbeat recorded for device {device.DeviceId}");
         }
 
         _logger.LogInformation($"Heartbeat check completed: {respondedCount}/{devices.Count()} devices responded");

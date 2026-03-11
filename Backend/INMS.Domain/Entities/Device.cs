@@ -11,25 +11,27 @@ namespace INMS.Domain.Entities
 
         [Required]
         [MaxLength(100)]
-        public string DeviceName { get; set; }
+        public string DeviceName { get; set; } = string.Empty;
+
+        [Required]
+        public DeviceType DeviceType { get; set; }
 
         [Required]
         [MaxLength(50)]
-        public string DeviceType { get; set; } // SLBN, CEAN, MSAN
-
-        [Required]
-        [MaxLength(50)]
-        public string IP { get; set; }
+        public string IP { get; set; } = string.Empty;
 
         [Required]
         public DeviceStatus Status { get; set; } = DeviceStatus.UP;
 
         [Required]
-        public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.LOW;
+        public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.Low;
 
         [ForeignKey("LEA")]
         public int LEAId { get; set; }
 
         public int? AssignedUserId { get; set; }
+        public User? AssignedUser { get; set; }
+
+        public bool IsSimulatedDown { get; set; } = false;
     }
 }

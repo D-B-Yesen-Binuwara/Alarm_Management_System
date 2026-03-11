@@ -27,8 +27,19 @@ namespace INMS.Application.Services
 
         public async Task<Device> CreateAsync(Device device)
         {
+            // Validate Assigned User
+            if (device.AssignedUserId.HasValue)
+            {
+                var userExists = await _context.Users
+                    .AnyAsync(u => u.UserId == device.AssignedUserId.Value);
+
+                if (!userExists)
+                    throw new Exception("Assigned user does not exist.");
+            }
+
             _context.Devices.Add(device);
             await _context.SaveChangesAsync();
+
             return device;
         }
 
@@ -36,6 +47,16 @@ namespace INMS.Application.Services
         {
             var existing = await _context.Devices.FindAsync(id);
             if (existing == null) return null;
+
+            // Validate user again
+            if (device.AssignedUserId.HasValue)
+            {
+                var userExists = await _context.Users
+                    .AnyAsync(u => u.UserId == device.AssignedUserId.Value);
+
+                if (!userExists)
+                    throw new Exception("Assigned user does not exist.");
+            }
 
             existing.DeviceName = device.DeviceName;
             existing.DeviceType = device.DeviceType;
@@ -59,6 +80,20 @@ namespace INMS.Application.Services
             return true;
         }
 
+        public async Task AssignDeviceAsync(int deviceId, int userId)
+        {
+            var device = await _context.Devices.FindAsync(deviceId);
+            if (device == null)
+                throw new Exception("Device not found");
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                throw new Exception("User not found");
+
+            device.AssignedUserId = userId;
+
+            await _context.SaveChangesAsync();
+        }
         public async Task<Device?> UpdateStatusAsync(int id, DeviceStatus status)
         {
             var device = await _context.Devices.FindAsync(id);

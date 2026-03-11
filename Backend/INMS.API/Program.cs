@@ -14,6 +14,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
+builder.Services.AddScoped<IDeviceLinkRepository, DeviceLinkRepository>();
+builder.Services.AddScoped<IDeviceLinkService, DeviceLinkService>();
+builder.Services.AddScoped<IRegionRepository, RegionRepository>();
+builder.Services.AddScoped<IRegionService, RegionService>();
 
 builder.Services.AddScoped<IAlarmRepository, AlarmRepository>();
 builder.Services.AddScoped<IAlarmService, AlarmService>();
@@ -42,7 +46,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.MapControllers();
 
 var summaries = new[]
