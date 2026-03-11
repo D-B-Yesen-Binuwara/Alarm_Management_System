@@ -4,5 +4,7 @@ public enum DeviceStatus
 {
     UP,
     DOWN,
+    UNREACHABLE,
+    UNKNOWN,
     IMPACTED
 }
