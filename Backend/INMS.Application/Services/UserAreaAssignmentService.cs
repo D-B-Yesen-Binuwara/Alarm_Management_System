@@ -1,5 +1,5 @@
 using INMS.Domain.Entities;
-using INMS.Domain.Repositories;
+using INMS.Domain.Interfaces;
 
 namespace INMS.Application.Services;
 

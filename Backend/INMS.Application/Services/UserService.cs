@@ -1,5 +1,5 @@
 using INMS.Domain.Entities;
-using INMS.Domain.Repositories;
+using INMS.Domain.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
 
