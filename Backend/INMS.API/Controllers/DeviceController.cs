@@ -23,6 +23,13 @@ namespace INMS.API.Controllers
             return Ok(devices);
         }
 
+        [HttpGet("visible/{userId}")]
+        public async Task<IActionResult> GetVisible(int userId)
+        {
+            var devices = await _deviceService.GetVisibleDevicesAsync(userId);
+            return Ok(devices);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
