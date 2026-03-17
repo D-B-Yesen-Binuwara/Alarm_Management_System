@@ -4,8 +4,14 @@ namespace INMS.Domain.Entities
 {
     public class Role
     {
+        [Key]
         public int RoleId { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string RoleName { get; set; } = string.Empty;
+
+        [MaxLength(255)]
+        public string Description { get; set; } = string.Empty;
     }
 }
