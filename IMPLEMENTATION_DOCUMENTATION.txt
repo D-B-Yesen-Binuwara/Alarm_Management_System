@@ -1,0 +1,729 @@
+================================================================================
+ALARM MANAGEMENT SYSTEM — COMPLETE IMPLEMENTATION DOCUMENTATION
+================================================================================
+
+PROJECT: Alarm Management System — Telecom Network Monitoring
+ARCHITECTURE: Clean Architecture (.NET 9.0, EF Core, SQL Server)
+SCOPE: Features implemented by this developer (excludes pre-existing Device CRUD,
+       Priority Tagging, Device Assignment, DeviceLink CRUD, Topology Validation,
+       Region CRUD, Province CRUD, LEA CRUD)
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+
+1. Alarm CRUD — Full Stack
+2. Heartbeat Manual Recording — Full Stack
+3. SimulationEvent Logging — Full Stack
+4. Manual Device Status Update
+5. Device Failure Simulation (IsSimulatedDown)
+6. HeartbeatSchedulerService — Background Service
+7. HeartbeatFailureDetectionService — Background Service
+8. Device Topology Failure Detection (Multi-Parent via DeviceLink)
+9. DeviceHealthController — Health Check API
+10. DeviceStatus Enum Additions
+11. AppDbContext & DI Registrations
+
+================================================================================
+1. ALARM CRUD — FULL STACK
+================================================================================
+
+WHAT
+----
+Complete Create, Read, Update, Delete operations for alarms. Alarms track device
+faults and system events in the telecom network.
+
+WHY
+---
+The Alarm entity already existed in the domain. No repository, service, or
+controller had been built around it. This feature wired the full stack so alarms
+could be created, queried, updated, and deleted via REST API.
+
+FILES CREATED / MODIFIED
+-------------------------
+- INMS.Domain/Interfaces/IAlarmRepository.cs          [NEW]
+- INMS.Infrastructure/Repositories/AlarmRepository.cs [NEW]
+- INMS.Application/Interfaces/IAlarmService.cs        [NEW]
+- INMS.Application/Services/AlarmService.cs           [MODIFIED — was empty placeholder]
+- INMS.API/Controllers/AlarmController.cs             [NEW]
+- INMS.API/Program.cs                                 [MODIFIED — DI registrations]
+
+KEY IMPLEMENTATION DETAILS
+---------------------------
+IAlarmRepository defines: GetByIdAsync, GetAllAsync, GetByDeviceIdAsync,
+AddAsync, UpdateAsync, DeleteAsync.
+
+AlarmRepository implements all methods using EF Core against AppDbContext.Alarms.
+GetByDeviceIdAsync uses a LINQ Where clause to filter by DeviceId.
+
+AlarmService business rules:
+- CreateAsync: auto-sets RaisedTime = DateTime.Now and IsActive = true
+- UpdateAsync: validates the alarm exists before updating; enforces AlarmId = id
+
+AlarmController exposes 6 REST endpoints:
+  GET    /api/alarm                  — all alarms
+  GET    /api/alarm/{id}             — single alarm (404 if not found)
+  GET    /api/alarm/device/{deviceId}— alarms for a specific device
+  POST   /api/alarm                  — create (returns 201 Created)
+  PUT    /api/alarm/{id}             — update (404 if not found)
+  DELETE /api/alarm/{id}             — delete (204 No Content or 404)
+
+DI registrations added to Program.cs:
+  builder.Services.AddScoped<IAlarmRepository, AlarmRepository>();
+  builder.Services.AddScoped<IAlarmService, AlarmService>();
+
+DATA FLOW
+---------
+HTTP Request → AlarmController → AlarmService → AlarmRepository → Database
+HTTP Response ← AlarmController ← AlarmService ← AlarmRepository ← Database
+
+
+================================================================================
+2. HEARTBEAT MANUAL RECORDING — FULL STACK
+================================================================================
+
+WHAT
+----
+API-based heartbeat recording for device health tracking. Allows recording a
+heartbeat signal for any device, retrieving heartbeat history, and getting the
+latest heartbeat for a device.
+
+WHY
+---
+Before automated monitoring could be built, a persistence layer for heartbeat
+data was needed. This feature provides the full stack for storing and querying
+heartbeat records, and is also used internally by the background scheduler.
+
+FILES CREATED / MODIFIED
+-------------------------
+- INMS.Domain/Entities/Heartbeat.cs                        [NEW]
+- INMS.Domain/Interfaces/IHeartbeatRepository.cs           [NEW]
+- INMS.Infrastructure/Repositories/HeartbeatRepository.cs  [NEW]
+- INMS.Application/Interfaces/IHeartbeatService.cs         [NEW]
+- INMS.Application/Services/HeartbeatService.cs            [NEW]
+- INMS.API/Controllers/HeartbeatController.cs              [NEW]
+- INMS.Infrastructure/Persistence/AppDbContext.cs          [MODIFIED]
+- INMS.API/Program.cs                                      [MODIFIED]
+
+KEY IMPLEMENTATION DETAILS
+---------------------------
+Heartbeat entity fields: HeartbeatId (PK), DeviceId, Timestamp, Status ("UP"/"DOWN").
+
+IHeartbeatRepository defines: AddAsync, GetByDeviceIdAsync, GetLatestByDeviceIdAsync.
+Heartbeats are append-only — no Update or Delete methods.
+
+HeartbeatRepository:
+- GetByDeviceIdAsync: orders by Timestamp descending (newest first)
+- GetLatestByDeviceIdAsync: returns the single most recent record
+
+HeartbeatService business rule:
+- RecordHeartbeatAsync: constructs the Heartbeat object and auto-sets
+  Timestamp = DateTime.Now before persisting
+
+HeartbeatController exposes 3 REST endpoints:
+  POST /api/heartbeat                          — record heartbeat (body: DeviceId, Status)
+  GET  /api/heartbeat/device/{deviceId}        — full history for device
+  GET  /api/heartbeat/device/{deviceId}/latest — most recent heartbeat (404 if none)
+
+AppDbContext additions:
+  public DbSet<Heartbeat> Heartbeats { get; set; }
+  modelBuilder.Entity<Heartbeat>().ToTable("Heartbeat");
+
+DI registrations added to Program.cs:
+  builder.Services.AddScoped<IHeartbeatRepository, HeartbeatRepository>();
+  builder.Services.AddScoped<IHeartbeatService, HeartbeatService>();
+
+LATER ADDITION TO IHeartbeatRepository (N+1 fix — see Section 8)
+-----------------------------------------------------------------
+GetLatestHeartbeatsForAllDevicesAsync() was added to support a single batched
+query in HeartbeatFailureDetectionService instead of one query per device.
+
+
+================================================================================
+3. SIMULATIONEVENT LOGGING — FULL STACK
+================================================================================
+
+WHAT
+----
+Audit trail for all simulation and monitoring events. Every time a device is
+detected as failed or recovered, an event record is written to the SimulationEvent
+table. Events can also be logged manually via API.
+
+WHY
+---
+The system needed a permanent record of what happened and when — both for
+debugging and for demonstrating NOC monitoring workflows. SimulationEvent serves
+as the event log for the entire monitoring pipeline.
+
+FILES CREATED / MODIFIED
+-------------------------
+- INMS.Domain/Entities/SimulationEvent.cs                        [NEW]
+- INMS.Domain/Interfaces/ISimulationEventRepository.cs           [NEW]
+- INMS.Infrastructure/Repositories/SimulationEventRepository.cs  [NEW]
+- INMS.Application/Interfaces/ISimulationEventService.cs         [NEW]
+- INMS.Application/Services/SimulationEventService.cs            [NEW]
+- INMS.API/Controllers/SimulationEventController.cs              [NEW]
+- INMS.Infrastructure/Persistence/AppDbContext.cs                [MODIFIED]
+- INMS.API/Program.cs                                            [MODIFIED]
+
+KEY IMPLEMENTATION DETAILS
+---------------------------
+SimulationEvent entity fields: EventId (PK), DeviceId, EventType, EventTime.
+
+ISimulationEventRepository defines: AddAsync, GetByDeviceIdAsync, GetAllAsync.
+Events are append-only — no Update or Delete.
+
+SimulationEventService business rule:
+- LogEventAsync: constructs the SimulationEvent and auto-sets
+  EventTime = DateTime.Now before persisting
+
+SimulationEventController exposes 3 REST endpoints:
+  POST /api/simulationevent                    — log event (body: DeviceId, EventType)
+  GET  /api/simulationevent                    — all events (newest first)
+  GET  /api/simulationevent/device/{deviceId}  — events for a specific device
+
+Event types used by the monitoring pipeline:
+  HEARTBEAT_TIMEOUT    — device missed heartbeats for 90+ seconds
+  HEARTBEAT_RECOVERED  — device resumed heartbeats after being DOWN
+
+AppDbContext additions:
+  public DbSet<SimulationEvent> SimulationEvents { get; set; }
+  modelBuilder.Entity<SimulationEvent>().ToTable("SimulationEvent");
+
+DI registrations added to Program.cs:
+  builder.Services.AddScoped<ISimulationEventRepository, SimulationEventRepository>();
+  builder.Services.AddScoped<ISimulationEventService, SimulationEventService>();
+
+
+================================================================================
+4. MANUAL DEVICE STATUS UPDATE
+================================================================================
+
+WHAT
+----
+A PATCH endpoint that updates only the Status field of a device, without touching
+any other device properties.
+
+WHY
+---
+The existing PUT /api/devices/{id} updates the entire device object. For simulation
+and NOC operator workflows, a lightweight endpoint was needed to flip a device
+between UP, DOWN, and IMPACTED without risk of overwriting other fields.
+
+FILES MODIFIED
+--------------
+- INMS.Application/Interfaces/IDeviceService.cs   [MODIFIED]
+- INMS.Application/Services/DeviceService.cs      [MODIFIED]
+- INMS.API/Controllers/DeviceController.cs        [MODIFIED]
+
+KEY IMPLEMENTATION DETAILS
+---------------------------
+IDeviceService addition:
+  Task<Device> UpdateStatusAsync(int id, DeviceStatus status);
+
+DeviceService implementation:
+  Retrieves device by ID, updates only device.Status, saves, returns updated
+  device (or null if not found).
+
+DeviceController addition:
+  PATCH /api/devices/{id}/status
+  Body: { "Status": <DeviceStatus enum value> }
+  Returns 200 OK with updated device, or 404 if device not found.
+
+DeviceStatus enum values: UP = 0, DOWN = 1, UNREACHABLE = 2
+
+
+================================================================================
+5. DEVICE FAILURE SIMULATION (IsSimulatedDown)
+================================================================================
+
+WHAT
+----
+A controlled mechanism to simulate device failures and recoveries for testing
+and demonstrations. A boolean flag on the Device entity tells the heartbeat
+scheduler to stop recording heartbeats for that device, causing the failure
+detection service to naturally detect a timeout.
+
+WHY
+---
+Random packet-loss simulation (10% miss rate) creates unpredictable failures
+that are hard to demonstrate or test against specific scenarios. The IsSimulatedDown
+flag gives full control over which device fails and when, while keeping the
+monitoring logic unchanged — the API never directly sets a device to DOWN.
+
+STAGES OF IMPLEMENTATION
+-------------------------
+Stage 1 — Entity & Migration:
+  Added IsSimulatedDown (bool, default false) to Device.cs.
+  Created SQL migration: Backend/Migrations/AddIsSimulatedDownToDevice.sql
+    ALTER TABLE Device ADD IsSimulatedDown BIT NOT NULL DEFAULT 0;
+
+Stage 2 — Scheduler Integration:
+  HeartbeatSchedulerService was updated to skip heartbeat recording for any
+  device where IsSimulatedDown = true (see Section 6).
+
+Stage 3 — API Endpoints:
+  Two new endpoints added to DeviceController:
+
+  POST /api/devices/{id}/simulate-failure
+    Sets device.IsSimulatedDown = true via UpdateAsync.
+    The scheduler then stops recording heartbeats for this device.
+    After 90 seconds, HeartbeatFailureDetectionService detects the timeout
+    and sets Status = DOWN automatically.
+
+  POST /api/devices/{id}/recover
+    Sets device.IsSimulatedDown = false via UpdateAsync.
+    The scheduler resumes recording heartbeats.
+    HeartbeatFailureDetectionService detects the resumed heartbeat and
+    sets Status = UP automatically.
+
+FILES MODIFIED
+--------------
+- INMS.Domain/Entities/Device.cs                                    [MODIFIED]
+- INMS.API/BackgroundServices/HeartbeatSchedulerService.cs          [MODIFIED]
+- INMS.API/Controllers/DeviceController.cs                          [MODIFIED]
+- Backend/Migrations/AddIsSimulatedDownToDevice.sql                 [NEW]
+
+KEY PRINCIPLE
+-------------
+The API never directly changes device.Status. Status is always determined by
+the monitoring logic (HeartbeatFailureDetectionService). The simulation flag
+only controls whether heartbeats are recorded.
+
+COMPLETE FAILURE WORKFLOW
+--------------------------
+POST /api/devices/5/simulate-failure
+  → IsSimulatedDown = true
+  → Scheduler skips device (no heartbeat recorded)
+  → After 90s: FailureDetectionService detects timeout
+  → device.Status = DOWN
+  → SimulationEvent logged: HEARTBEAT_TIMEOUT
+
+POST /api/devices/5/recover
+  → IsSimulatedDown = false
+  → Scheduler resumes recording heartbeats
+  → FailureDetectionService detects valid heartbeat
+  → device.Status = UP
+  → SimulationEvent logged: HEARTBEAT_RECOVERED
+
+
+================================================================================
+6. HEARTBEATSCHEDULERSERVICE — BACKGROUND SERVICE
+================================================================================
+
+WHAT
+----
+An ASP.NET Core BackgroundService that runs every 30 seconds and records a
+heartbeat for every active device in the system.
+
+WHY
+---
+Real telecom monitoring systems poll devices periodically. This service simulates
+that polling cycle. Without it, the failure detection service would have no
+heartbeat data to evaluate.
+
+FILE
+----
+- INMS.API/BackgroundServices/HeartbeatSchedulerService.cs [NEW]
+- INMS.API/Program.cs [MODIFIED — AddHostedService registration]
+
+EVOLUTION OF IMPLEMENTATION
+-----------------------------
+Version 1 (Initial — incorrect):
+  Recorded a heartbeat for every device with Status == UP on every cycle.
+  Problem: Heartbeats never stopped, so failure detection could never trigger.
+  The scheduler itself was preventing failures from being detected.
+
+Version 2 (Conceptual correction — random packet loss):
+  Added 90% success rate simulation: random.Next(0, 100) > 10.
+  Only recorded heartbeat if the device "responded" (90% chance).
+  This allowed natural, random failures to occur.
+  Problem: Failures were unpredictable and hard to control for demos/testing.
+  Also noted: creating new Random() inside the method could produce predictable
+  patterns; recommendation was to use a static field or Random.Shared.
+
+Version 3 (Final — IsSimulatedDown controlled simulation):
+  Removed random packet loss. Instead:
+  - If device.IsSimulatedDown == true → skip (no heartbeat recorded)
+  - Otherwise → record heartbeat regardless of current Status
+  Recording heartbeat regardless of current Status (not just when Status == UP)
+  is critical: it enables automatic recovery detection. If a device was DOWN
+  and its IsSimulatedDown is cleared, the scheduler records a heartbeat, and
+  the failure detection service sees a valid recent heartbeat and marks it UP.
+
+FINAL LOGIC SUMMARY
+--------------------
+  foreach (var device in devices)
+  {
+      if (device.IsSimulatedDown) continue;  // skip — no heartbeat
+      await heartbeatService.RecordHeartbeatAsync(device.DeviceId, "UP");
+  }
+
+CONFIGURATION
+-------------
+  Heartbeat interval: 30 seconds
+  Runs continuously from application start
+
+
+================================================================================
+7. HEARTBEATFAILUREDETECTIONSERVICE — BACKGROUND SERVICE
+================================================================================
+
+WHAT
+----
+An ASP.NET Core BackgroundService that runs every 30 seconds (starting 45 seconds
+after application start) and evaluates every device's heartbeat recency and
+topology position to determine its correct status.
+
+WHY
+---
+The scheduler records heartbeats but does not make status decisions. This service
+is the "brain" of the monitoring system — it reads heartbeat timestamps, applies
+the 90-second timeout rule, and propagates failures through the network topology.
+
+FILE
+----
+- INMS.API/BackgroundServices/HeartbeatFailureDetectionService.cs [NEW, then REWRITTEN]
+- INMS.API/Program.cs [MODIFIED — AddHostedService registration]
+
+EVOLUTION OF IMPLEMENTATION
+-----------------------------
+Version 1 (Initial):
+  Simple per-device heartbeat check. For each device, fetched the latest
+  heartbeat and compared to current time. If > 90 seconds, marked DOWN.
+  If device was DOWN and heartbeat resumed, marked UP.
+  Problem: N+1 database queries (one heartbeat query per device).
+  Problem: No topology awareness — all failures treated as direct device failures.
+  Problem: HEARTBEAT_RECOVERED logged even for topology-based recoveries (UNREACHABLE → UP).
+
+Version 2 (Multi-parent topology rewrite):
+  Completely rewritten to use DeviceLink relationships instead of a
+  (now-removed) ParentDeviceId field on Device.
+  Added batch heartbeat loading to fix N+1 queries.
+  Added isTopologyBasedChange flag to separate heartbeat events from topology events.
+  Added UNREACHABLE propagation: if ALL parents of a device are DOWN or UNREACHABLE,
+  the device is marked UNREACHABLE (not DOWN).
+
+FINAL ALGORITHM
+---------------
+1. Load all devices.
+2. Load all DeviceLinks with parent devices included.
+3. Group DeviceLinks by ChildDeviceId into a dictionary for O(1) lookup.
+4. Batch-load latest heartbeat for all devices in a single query.
+5. For each device:
+   a. Check if device has parents (via DeviceLink dictionary).
+   b. If ALL parents are DOWN or UNREACHABLE → newStatus = UNREACHABLE
+      (isTopologyBasedChange = true, no heartbeat event logged)
+   c. If at least one parent is UP (or device has no parents) →
+      check heartbeat timestamp:
+        - timeSinceLast > 90s → newStatus = DOWN
+          (log HEARTBEAT_TIMEOUT if status is changing)
+        - timeSinceLast <= 90s → newStatus = UP
+          (log HEARTBEAT_RECOVERED if recovering from DOWN)
+   d. Only update device.Status if it changed (avoids unnecessary DB writes).
+6. Save all changes in a single batch (context.SaveChangesAsync()).
+
+STATUS DECISION TABLE
+---------------------
+Parent States                   | Heartbeat     | Resulting Status
+--------------------------------|---------------|------------------
+At least one parent UP          | < 90s         | UP
+At least one parent UP          | > 90s         | DOWN
+ALL parents DOWN/UNREACHABLE    | N/A           | UNREACHABLE
+No parents (root device)        | < 90s         | UP
+No parents (root device)        | > 90s         | DOWN
+
+EVENT LOGGING RULES
+-------------------
+HEARTBEAT_TIMEOUT:   logged only when a device transitions to DOWN due to
+                     heartbeat timeout (not for UNREACHABLE transitions)
+HEARTBEAT_RECOVERED: logged only when a device transitions from DOWN to UP
+                     due to heartbeat resuming (not for UNREACHABLE → UP)
+
+OPTIMIZATIONS
+-------------
+- N+1 fix: single grouped query loads all latest heartbeats upfront
+  (GetLatestHeartbeatsForAllDevicesAsync added to IHeartbeatRepository)
+- Change-only updates: device.Status only written if it differs from newStatus
+  (reduces DB writes from N per cycle to only changed devices)
+
+CONFIGURATION
+-------------
+  Initial delay: 45 seconds (allows scheduler to run first)
+  Check interval: 30 seconds
+  Failure timeout: 90 seconds (3 missed heartbeats)
+
+
+================================================================================
+8. DEVICE TOPOLOGY FAILURE DETECTION (MULTI-PARENT VIA DEVICELINK)
+================================================================================
+
+WHAT
+----
+Topology-aware failure propagation using the existing DeviceLink table. When a
+parent device fails, all child devices that have no other reachable parent are
+automatically marked UNREACHABLE instead of DOWN.
+
+WHY
+---
+Without topology awareness, a single parent failure would cause every downstream
+device to appear as independently failed — generating an alarm storm and hiding
+the root cause. With topology awareness, operators see one root-cause failure and
+all downstream devices correctly marked UNREACHABLE.
+
+ARCHITECTURE DECISION: DeviceLink vs ParentDeviceId
+----------------------------------------------------
+Initially, adding a ParentDeviceId column to the Device table was considered.
+This was abandoned in favour of the existing DeviceLink table because:
+- DeviceLink supports multiple parents per device (redundant network paths)
+- No schema changes to the Device table required
+- Real telecom networks have redundant upstream connections
+
+WHAT WAS REMOVED FROM Device.cs
+---------------------------------
+- ParentDeviceId (int?) property
+- ParentDevice (Device?) navigation property
+- Children (ICollection<Device>?) navigation property
+
+WHAT WAS REMOVED FROM AppDbContext.cs
+---------------------------------------
+- Device-to-Device self-referencing relationship configuration
+- HasOne/WithMany/HasForeignKey setup for ParentDeviceId
+
+MULTI-PARENT REDUNDANCY BEHAVIOUR
+-----------------------------------
+Router A (DOWN) ──┐
+                  ├── Device C → remains UP (reachable via Router B)
+Router B (UP)   ──┘
+
+Router A (DOWN) ──┐
+                  ├── Device C → UNREACHABLE (all paths down)
+Router B (DOWN) ──┘
+
+FAILURE PROPAGATION EXAMPLE
+-----------------------------
+Topology: Core Router (1) → Switch A (2) → Device X (3)
+
+Core Router heartbeat times out (91s):
+  Device 1: no parents, heartbeat timeout → DOWN, HEARTBEAT_TIMEOUT logged
+  Device 2: parent = Device 1 (DOWN), all parents down → UNREACHABLE, no event
+  Device 3: parent = Device 2 (UNREACHABLE), all parents down → UNREACHABLE, no event
+
+Result: operators see 1 root-cause alert, not 3 independent failures.
+
+RECOVERY PROPAGATION EXAMPLE
+------------------------------
+Core Router recovers (heartbeat resumes):
+  Device 1: heartbeat < 90s, was DOWN → UP, HEARTBEAT_RECOVERED logged
+  Device 2: parent = Device 1 (UP), heartbeat < 90s, was UNREACHABLE → UP, HEARTBEAT_RECOVERED logged
+  Device 3: parent = Device 2 (UP), heartbeat < 90s, was UNREACHABLE → UP, HEARTBEAT_RECOVERED logged
+
+FILES MODIFIED
+--------------
+- INMS.Domain/Entities/Device.cs                                    [CLEANED UP]
+- INMS.Infrastructure/Persistence/AppDbContext.cs                   [CLEANED UP]
+- INMS.API/BackgroundServices/HeartbeatFailureDetectionService.cs   [REWRITTEN]
+- DEVICE_TOPOLOGY_IMPLEMENTATION.txt                                [UPDATED]
+
+DATABASE
+--------
+No schema changes required. The DeviceLink table already existed and already
+supported multi-parent relationships via ParentDeviceId and ChildDeviceId columns.
+
+
+================================================================================
+9. DEVICEHEALTHCONTROLLER — HEALTH CHECK API
+================================================================================
+
+WHAT
+----
+REST API endpoints that expose real-time health status for individual devices
+and a network-wide health summary.
+
+WHY
+---
+The background services update device status in the database, but there was no
+API for the frontend or NOC operators to query current health state. This
+controller provides that visibility.
+
+FILE
+----
+- INMS.API/Controllers/DeviceHealthController.cs [NEW]
+
+ENDPOINTS
+---------
+GET /api/devices/{id}/health
+  Returns:
+  {
+    "deviceId": 5,
+    "deviceName": "SLBN_Colombo_01",
+    "status": "UP",
+    "lastHeartbeat": "2026-03-09T10:29:45",
+    "timeSinceLastHeartbeat": 15.3,
+    "isHealthy": true
+  }
+  isHealthy = true when last heartbeat was < 90 seconds ago.
+
+GET /api/devices/health/summary
+  Returns:
+  {
+    "totalDevices": 50,
+    "onlineDevices": 45,
+    "offlineDevices": 3,
+    "impactedDevices": 2
+  }
+
+
+================================================================================
+10. DEVICESTATUS ENUM MODIFICATIONS
+================================================================================
+
+WHAT
+----
+IMPACTED and UNKNOWN values removed from the DeviceStatus enum as they were unused.
+
+WHY
+---
+The topology failure detection logic uses UNREACHABLE to distinguish between
+a device that failed on its own (DOWN) versus one that is inaccessible because
+its parent failed (UNREACHABLE). IMPACTED and UNKNOWN were not being set in the code.
+
+FILE
+----
+- INMS.Domain/Enums/DeviceStatus.cs [MODIFIED]
+
+VALUES REMOVED
+------------
+IMPACTED — unused status
+UNKNOWN  — unused status
+
+FULL ENUM
+---------
+public enum DeviceStatus
+{
+    UP,           // Device responding normally (heartbeat within 90s)
+    DOWN,         // Device itself failed (heartbeat timeout)
+    UNREACHABLE   // All parents DOWN/UNREACHABLE — topology-based
+}
+
+
+================================================================================
+11. APPDBCONTEXT & DI REGISTRATIONS
+================================================================================
+
+APPDBCONTEXT ADDITIONS (INMS.Infrastructure/Persistence/AppDbContext.cs)
+-------------------------------------------------------------------------
+DbSets added:
+  public DbSet<Heartbeat> Heartbeats { get; set; }
+  public DbSet<SimulationEvent> SimulationEvents { get; set; }
+
+Table mappings added in OnModelCreating:
+  modelBuilder.Entity<Heartbeat>().ToTable("Heartbeat");
+  modelBuilder.Entity<SimulationEvent>().ToTable("SimulationEvent");
+
+Removed:
+  Device-to-Device self-referencing relationship configuration (replaced by DeviceLink)
+
+PROGRAM.CS DI REGISTRATIONS (INMS.API/Program.cs)
+---------------------------------------------------
+Scoped services (one instance per HTTP request):
+  builder.Services.AddScoped<IAlarmRepository, AlarmRepository>();
+  builder.Services.AddScoped<IAlarmService, AlarmService>();
+  builder.Services.AddScoped<IHeartbeatRepository, HeartbeatRepository>();
+  builder.Services.AddScoped<IHeartbeatService, HeartbeatService>();
+  builder.Services.AddScoped<ISimulationEventRepository, SimulationEventRepository>();
+  builder.Services.AddScoped<ISimulationEventService, SimulationEventService>();
+
+Background services (singleton, start with application):
+  builder.Services.AddHostedService<HeartbeatSchedulerService>();
+  builder.Services.AddHostedService<HeartbeatFailureDetectionService>();
+
+
+================================================================================
+COMPLETE API ENDPOINT REFERENCE
+================================================================================
+
+ALARM
+  GET    /api/alarm                          — all alarms
+  GET    /api/alarm/{id}                     — alarm by ID
+  GET    /api/alarm/device/{deviceId}        — alarms for device
+  POST   /api/alarm                          — create alarm
+  PUT    /api/alarm/{id}                     — update alarm
+  DELETE /api/alarm/{id}                     — delete alarm
+
+HEARTBEAT
+  POST   /api/heartbeat                              — record heartbeat
+  GET    /api/heartbeat/device/{deviceId}            — heartbeat history
+  GET    /api/heartbeat/device/{deviceId}/latest     — latest heartbeat
+
+SIMULATION EVENT
+  POST   /api/simulationevent                        — log event
+  GET    /api/simulationevent                        — all events
+  GET    /api/simulationevent/device/{deviceId}      — events for device
+
+DEVICE (additions only)
+  PATCH  /api/devices/{id}/status                    — update status only
+  POST   /api/devices/{id}/simulate-failure          — start failure simulation
+  POST   /api/devices/{id}/recover                   — start recovery simulation
+
+DEVICE HEALTH
+  GET    /api/devices/{id}/health                    — device health detail
+  GET    /api/devices/health/summary                 — network health summary
+
+
+================================================================================
+MONITORING SYSTEM TIMING REFERENCE
+================================================================================
+
+T+0s    HeartbeatSchedulerService starts
+        Records heartbeat for all non-simulated devices
+
+T+30s   HeartbeatSchedulerService runs again
+
+T+45s   HeartbeatFailureDetectionService starts (first check)
+        Evaluates all devices against 90s timeout and topology
+
+T+60s   HeartbeatSchedulerService runs
+
+T+75s   HeartbeatFailureDetectionService runs (second check)
+
+T+90s+  Both services continue on 30-second cycles indefinitely
+
+Failure detection window: 90 seconds (3 missed heartbeat cycles)
+Recovery detection: next FailureDetectionService cycle after heartbeat resumes
+
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
+
+================================================================================
+NOT YET IMPLEMENTED — SCAFFOLDED ONLY
+================================================================================
+
+RootCause
+---------
+Entity:     INMS.Domain/Entities/RootCause.cs — exists
+DB Table:   RootCause in DB_Schema.sql — exists
+Fields:     RootCauseId, AlarmId, RootCauseDeviceId, RootCauseType, DetectedTime
+
+Missing:    IRootCauseRepository, RootCauseRepository, IRootCauseService,
+            RootCauseService, RootCauseController
+
+Current state: HeartbeatFailureDetectionService identifies which device went DOWN
+(the root cause) but never writes to this table. The root cause device is only
+implicitly known — it is the device whose heartbeat timed out while its parents
+were UP. This information is not persisted anywhere as a RootCause record.
+
+ImpactedDevice
+--------------
+Entity:     INMS.Domain/Entities/ImpactedDevice.cs — exists
+DB Table:   ImpactedDevice in DB_Schema.sql — exists
+Fields:     ImpactId, RootCauseId, DeviceId, ImpactType (UPSTREAM | DOWNSTREAM)
+
+Missing:    IImpactedDeviceRepository, ImpactedDeviceRepository,
+            IImpactedDeviceService, ImpactedDeviceService, ImpactedDeviceController
+
+Current state: Devices affected by a parent failure are marked UNREACHABLE on
+Device.Status, but they are never recorded in the ImpactedDevice table. Impact
+analysis exists only as a transient status value, not as a persisted record.
