@@ -84,6 +84,10 @@ builder.Services.AddScoped<IProvinceRepository, ProvinceRepository>();
 builder.Services.AddScoped<IProvinceService, ProvinceService>();
 builder.Services.AddScoped<ILEARepository, LEARepository>();
 builder.Services.AddScoped<ILEAService, LEAService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IUserAreaAssignmentRepository, UserAreaAssignmentRepository>();
+builder.Services.AddScoped<UserAreaAssignmentService>();
 
 
 builder.Services.AddControllers();

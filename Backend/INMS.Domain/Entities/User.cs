@@ -6,8 +6,17 @@ public class User
 {
     [Key]
     public int UserId { get; set; }
-    public string Username { get; set; }
-    public string PasswordHash { get; set; }
-    public string FullName { get; set; }
+
+    [Required]
+    [MaxLength(100)]
+    public string Username { get; set; } = string.Empty;
+
+    [Required]
+    public string PasswordHash { get; set; } = string.Empty;
+
+    [MaxLength(150)]
+    public string FullName { get; set; } = string.Empty;
+
     public int RoleId { get; set; }
+    public Role? Role { get; set; }
 }
