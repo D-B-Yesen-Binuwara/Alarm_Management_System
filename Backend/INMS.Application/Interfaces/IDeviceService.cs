@@ -10,5 +10,6 @@ namespace INMS.Application.Interfaces
         Task<Device> UpdateAsync(int id, Device device);
         Task<bool> DeleteAsync(int id);
         Task AssignDeviceAsync(int deviceId, int userId);
+        Task<List<Device>> GetVisibleDevicesAsync(int userId);
     }
 }

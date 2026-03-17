@@ -55,5 +55,9 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(dl => dl.ChildDeviceId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Role>()
+            .Property(r => r.RoleName)
+            .HasColumnName("Name");
     }
 }
