@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using INMS.Application.Interfaces;
 using INMS.Domain.Entities;
+using INMS.Domain.Enums;
 
 namespace INMS.API.Controllers
 {
@@ -67,9 +68,43 @@ namespace INMS.API.Controllers
             return Ok("Device assigned successfully");
         }
 
+        [HttpPost("{id}/simulate-failure")]
+        public async Task<IActionResult> SimulateFailure(int id)
+        {
+            var device = await _deviceService.GetByIdAsync(id);
+            if (device == null) return NotFound();
+            
+            device.IsSimulatedDown = true;
+            await _deviceService.UpdateAsync(id, device);
+            return Ok(new { message = "Device failure simulation started", deviceId = id });
+        }
+
+        [HttpPost("{id}/recover")]
+        public async Task<IActionResult> Recover(int id)
+        {
+            var device = await _deviceService.GetByIdAsync(id);
+            if (device == null) return NotFound();
+            
+            device.IsSimulatedDown = false;
+            await _deviceService.UpdateAsync(id, device);
+            return Ok(new { message = "Device recovery simulation started", deviceId = id });
+        }
+
         public class AssignDeviceRequest
         {
             public int UserId { get; set; }
         }
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest request)
+        {
+            var updated = await _deviceService.UpdateStatusAsync(id, request.Status);
+            if (updated == null) return NotFound();
+            return Ok(updated);
+        }
+    }
+
+    public class UpdateStatusRequest
+    {
+        public DeviceStatus Status { get; set; }
     }
 }
