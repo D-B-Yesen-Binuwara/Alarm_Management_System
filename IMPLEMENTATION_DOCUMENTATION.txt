@@ -624,6 +624,11 @@ Table mappings added in OnModelCreating:
 Removed:
   Device-to-Device self-referencing relationship configuration (replaced by DeviceLink)
 
+Entity Property Conversions:
+  modelBuilder.Entity<Device>()
+      .Property(d => d.Status)
+      .HasConversion<string>();
+
 PROGRAM.CS DI REGISTRATIONS (INMS.API/Program.cs)
 ---------------------------------------------------
 Scoped services (one instance per HTTP request):
