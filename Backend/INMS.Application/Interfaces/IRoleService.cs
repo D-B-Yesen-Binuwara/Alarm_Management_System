@@ -1,3 +1,4 @@
+using INMS.Application.DTOs;
 using INMS.Domain.Entities;
 
 namespace INMS.Application.Interfaces
@@ -6,8 +7,8 @@ namespace INMS.Application.Interfaces
     {
         Task<List<Role>> GetAllAsync();
         Task<Role?> GetByIdAsync(int id);
-        Task<Role> CreateAsync(Role role);
-        Task<Role> UpdateAsync(int id, Role role);
+        Task<Role> CreateAsync(CreateRoleDto dto);
+        Task<Role> UpdateAsync(int id, UpdateRoleDto dto);
         Task DeleteAsync(int id);
     }
 }

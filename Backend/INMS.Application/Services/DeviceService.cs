@@ -1,3 +1,4 @@
+using INMS.Application.DTOs;
 using INMS.Application.Interfaces;
 using INMS.Domain.Entities;
 using INMS.Domain.Interfaces;
@@ -22,53 +23,38 @@ namespace INMS.Application.Services
             _assignmentRepository = assignmentRepository;
         }
 
-        public async Task<IEnumerable<Device>> GetAllAsync()
-        {
-            return await _deviceRepository.GetAllAsync();
-        }
+        public async Task<IEnumerable<Device>> GetAllAsync() => await _deviceRepository.GetAllAsync();
 
-        public async Task<Device> GetByIdAsync(int id)
-        {
-            return await _deviceRepository.GetByIdAsync(id);
-        }
+        public async Task<Device?> GetByIdAsync(int id) => await _deviceRepository.GetByIdAsync(id);
 
-        public async Task<Device> CreateAsync(Device device)
+        public async Task<Device> CreateAsync(CreateDeviceDto dto)
         {
-            if (device.AssignedUserId.HasValue)
+            var device = new Device
             {
-                var userExists = await _context.Users
-                    .AnyAsync(u => u.UserId == device.AssignedUserId.Value);
-
-                if (!userExists)
-                    throw new Exception("Assigned user does not exist.");
-            }
+                DeviceName = dto.DeviceName,
+                DeviceType = dto.DeviceType,
+                IP = dto.IP ?? string.Empty,
+                PriorityLevel = dto.PriorityLevel,
+                LEAId = dto.LEAId,
+                Status = "UP"
+            };
 
             _context.Devices.Add(device);
             await _context.SaveChangesAsync();
             return device;
         }
 
-        public async Task<Device> UpdateAsync(int id, Device device)
+        public async Task<Device?> UpdateAsync(int id, UpdateDeviceDto dto)
         {
             var existing = await _deviceRepository.GetByIdAsync(id);
             if (existing == null) return null;
 
-            if (device.AssignedUserId.HasValue)
-            {
-                var userExists = await _context.Users
-                    .AnyAsync(u => u.UserId == device.AssignedUserId.Value);
-
-                if (!userExists)
-                    throw new Exception("Assigned user does not exist.");
-            }
-
-            existing.DeviceName = device.DeviceName;
-            existing.DeviceType = device.DeviceType;
-            existing.IP = device.IP;
-            existing.Status = device.Status;
-            existing.PriorityLevel = device.PriorityLevel;
-            existing.LEAId = device.LEAId;
-            existing.AssignedUserId = device.AssignedUserId;
+            existing.DeviceName = dto.DeviceName;
+            existing.DeviceType = dto.DeviceType;
+            existing.IP = dto.IP ?? string.Empty;
+            existing.Status = dto.Status;
+            existing.PriorityLevel = dto.PriorityLevel;
+            existing.LEAId = dto.LEAId;
 
             await _deviceRepository.UpdateAsync(existing);
             return existing;
@@ -86,11 +72,11 @@ namespace INMS.Application.Services
 
         public async Task AssignDeviceAsync(int deviceId, int userId)
         {
-            var device = await _deviceRepository.GetByIdAsync(deviceId);
-            if (device == null) throw new Exception("Device not found");
+            var device = await _deviceRepository.GetByIdAsync(deviceId)
+                ?? throw new Exception("Device not found");
 
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null) throw new Exception("User not found");
+            var user = await _context.Users.FindAsync(userId)
+                ?? throw new Exception("User not found");
 
             device.AssignedUserId = userId;
             await _deviceRepository.UpdateAsync(device);
@@ -99,9 +85,7 @@ namespace INMS.Application.Services
         public async Task<List<Device>> GetVisibleDevicesAsync(int userId)
         {
             var assignment = await _assignmentRepository.GetByUserId(userId);
-
-            if (assignment == null)
-                return new List<Device>();
+            if (assignment == null) return new List<Device>();
 
             return assignment.AreaType switch
             {
