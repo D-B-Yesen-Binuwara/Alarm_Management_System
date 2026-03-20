@@ -1,3 +1,4 @@
+using INMS.Application.DTOs;
 using INMS.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,10 +15,27 @@ public class UserAreaAssignmentController : ControllerBase
         _service = service;
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Assign(int userId, string areaType, int areaId)
+    [HttpGet]
+    public async Task<IActionResult> GetAll() => Ok(await _service.GetAllAsync());
+
+    [HttpGet("user/{userId}")]
+    public async Task<IActionResult> GetByUser(int userId)
     {
-        await _service.AssignArea(userId, areaType, areaId);
+        var assignment = await _service.GetByUserIdAsync(userId);
+        return assignment == null ? NotFound() : Ok(assignment);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Assign(AssignAreaDto dto)
+    {
+        await _service.AssignArea(dto);
         return Ok();
+    }
+
+    [HttpDelete("{assignmentId}")]
+    public async Task<IActionResult> Delete(int assignmentId)
+    {
+        await _service.DeleteAsync(assignmentId);
+        return NoContent();
     }
 }
