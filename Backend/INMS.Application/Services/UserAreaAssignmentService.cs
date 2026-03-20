@@ -7,10 +7,21 @@ namespace INMS.Application.Services;
 public class UserAreaAssignmentService
 {
     private readonly IUserAreaAssignmentRepository _repository;
+    private readonly IUserRepository _userRepository;
 
-    public UserAreaAssignmentService(IUserAreaAssignmentRepository repository)
+    private static readonly Dictionary<string, string> RoleAreaMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Region Officer",   "Region"   },
+        { "Province Officer", "Province" },
+        { "LEA Officer",      "LEA"      }
+    };
+
+    public UserAreaAssignmentService(
+        IUserAreaAssignmentRepository repository,
+        IUserRepository userRepository)
     {
         _repository = repository;
+        _userRepository = userRepository;
     }
 
     public async Task<List<UserAreaAssignment>> GetAllAsync()
@@ -21,8 +32,20 @@ public class UserAreaAssignmentService
 
     public async Task AssignArea(AssignAreaDto dto)
     {
-        if (dto.AreaType != "Region" && dto.AreaType != "Province" && dto.AreaType != "LEA")
-            throw new Exception("Invalid AreaType. Must be Region, Province, or LEA.");
+        var user = await _userRepository.GetById(dto.UserId)
+            ?? throw new Exception("User not found.");
+
+        var roleName = user.Role?.RoleName
+            ?? throw new Exception("User has no role assigned.");
+
+        if (roleName == "Admin")
+            throw new Exception("Admin has no area restriction and cannot be assigned to an area.");
+
+        if (!RoleAreaMap.TryGetValue(roleName, out var expectedAreaType))
+            throw new Exception($"Unknown role '{roleName}'.");
+
+        if (dto.AreaType != expectedAreaType)
+            throw new Exception($"Role '{roleName}' can only be assigned to a '{expectedAreaType}' area.");
 
         var assignment = new UserAreaAssignment
         {

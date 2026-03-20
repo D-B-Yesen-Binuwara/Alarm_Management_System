@@ -84,6 +84,14 @@ namespace INMS.Application.Services
 
         public async Task<List<Device>> GetVisibleDevicesAsync(int userId)
         {
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.UserId == userId)
+                ?? throw new Exception("User not found.");
+
+            if (user.Role?.RoleName == "Admin")
+                return await _deviceRepository.GetAllAsync();
+
             var assignment = await _assignmentRepository.GetByUserId(userId);
             if (assignment == null) return new List<Device>();
 
