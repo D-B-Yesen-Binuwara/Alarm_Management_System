@@ -29,12 +29,17 @@ builder.Services.AddScoped<IUserAreaAssignmentRepository, UserAreaAssignmentRepo
 builder.Services.AddScoped<UserAreaAssignmentService>();
 
 
+builder.Services.AddScoped<IAlarmRepository, AlarmRepository>();
+builder.Services.AddScoped<IAlarmService, AlarmService>();
+
+
+
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
+var app = builder.Build();  
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

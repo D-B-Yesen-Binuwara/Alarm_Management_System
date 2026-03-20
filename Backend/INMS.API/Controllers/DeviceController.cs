@@ -1,6 +1,8 @@
 using INMS.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using INMS.Application.Interfaces;
+using INMS.Domain.Entities;
+using INMS.Domain.Enums;
 
 namespace INMS.API.Controllers
 {
@@ -56,9 +58,23 @@ namespace INMS.API.Controllers
             return Ok("Device assigned successfully");
         }
 
+
+
         public class AssignDeviceRequest
         {
             public int UserId { get; set; }
         }
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest request)
+        {
+            var updated = await _deviceService.UpdateStatusAsync(id, request.Status);
+            if (updated == null) return NotFound();
+            return Ok(updated);
+        }
+    }
+
+    public class UpdateStatusRequest
+    {
+        public DeviceStatus Status { get; set; }
     }
 }
