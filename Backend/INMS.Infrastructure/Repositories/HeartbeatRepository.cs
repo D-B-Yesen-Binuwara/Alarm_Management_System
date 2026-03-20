@@ -36,4 +36,15 @@ public class HeartbeatRepository : IHeartbeatRepository
             .OrderByDescending(h => h.Timestamp)
             .FirstOrDefaultAsync();
     }
+
+    public async Task<Dictionary<int, Heartbeat>> GetLatestHeartbeatsForAllDevicesAsync()
+    {
+        var latestHeartbeats = await _context.Heartbeats
+            .GroupBy(h => h.DeviceId)
+            .Select(g => g.OrderByDescending(h => h.Timestamp).FirstOrDefault())
+            .Where(h => h != null)
+            .ToDictionaryAsync(h => h.DeviceId);
+
+        return latestHeartbeats;
+    }
 }

@@ -7,4 +7,5 @@ public interface IHeartbeatService
     Task<Heartbeat> RecordHeartbeatAsync(int deviceId, string status);
     Task<List<Heartbeat>> GetDeviceHeartbeatsAsync(int deviceId);
     Task<Heartbeat> GetLatestHeartbeatAsync(int deviceId);
+    Task<Dictionary<int, Heartbeat>> GetLatestHeartbeatsForAllDevicesAsync();
 }

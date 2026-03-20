@@ -56,7 +56,7 @@ CREATE TABLE Device (
     DeviceName NVARCHAR(150) NOT NULL,
     DeviceType NVARCHAR(50) NOT NULL,  -- SLBN | CEAN | MSAN | CUSTOMER
     IP NVARCHAR(50),
-    Status NVARCHAR(20) NOT NULL DEFAULT 'UP', -- UP | DOWN | IMPACTED
+    Status NVARCHAR(20) NOT NULL DEFAULT 'UP', -- UP | DOWN | UNREACHABLE
     PriorityLevel NVARCHAR(20) NOT NULL DEFAULT 'LOW', -- LOW | AVERAGE | HIGH | CRITICAL
     LEAId INT NOT NULL,
     AssignedUserId INT NULL,
@@ -154,3 +154,82 @@ CREATE INDEX IX_RootCause_Alarm ON RootCause(AlarmId);
 CREATE INDEX IX_Impact_Device ON ImpactedDevice(DeviceId);
 CREATE INDEX IX_DeviceLink_Parent ON DeviceLink(ParentDeviceId);
 CREATE INDEX IX_DeviceLink_Child ON DeviceLink(ChildDeviceId);
+
+
+-- Add missing columns
+ALTER TABLE Role ADD Description NVARCHAR(255) NULL;
+ALTER TABLE Region ADD Description NVARCHAR(255) NULL;
+
+-- Rename Role column
+EXEC sp_rename 'Role.RoleName', 'Name', 'COLUMN';
+
+/*------------------------------------------------*/
+USE INMS_SLT;
+
+/* SAMPLE DATA - HIERARCHICAL STRUCTURE */
+
+-- Regions
+INSERT INTO Region (Name) VALUES 
+('Western Region'),
+('Central Region'),
+('Southern Region');
+
+-- Provinces
+INSERT INTO Province (Name, RegionId) VALUES 
+('Colombo', 1),
+('Gampaha', 1),
+('Kandy', 2),
+('Galle', 3),
+('Matara', 3);
+
+-- LEAs
+INSERT INTO LEA (Name, ProvinceId) VALUES 
+('Colombo Central', 1),
+('Colombo North', 1),
+('Gampaha Town', 2),
+('Kandy City', 3),
+('Galle Fort', 4);
+
+-- Roles
+INSERT INTO Role (Name) VALUES 
+('Admin'),
+('Region Officer'),
+('Province Officer'),
+('LEA Officer');
+
+USE INMS_SLT;
+SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Role';
+
+
+-- Users
+INSERT INTO [User] (Username, PasswordHash, FullName, RoleId) VALUES 
+('admin', 'hash123', 'System Admin', 1),
+('officer1', 'hash456', 'John Silva', 4),
+('officer2', 'hash789', 'Mary Fernando', 4);
+
+-- Devices (SLBN → CEAN → MSAN hierarchy)
+INSERT INTO Device (DeviceName, DeviceType, IP, Status, PriorityLevel, LEAId, AssignedUserId) VALUES
+('SLBN-Colombo-01', 'SLBN', '10.0.1.1', 'UP', 'Critical', 1, NULL),
+('SLBN-Gampaha-01', 'SLBN', '10.0.2.1', 'UP', 'High', 3, NULL),
+('CEAN-Colombo-Central-01', 'CEAN', '10.1.1.1', 'UP', 'High', 1, 2),
+('CEAN-Colombo-North-01', 'CEAN', '10.1.2.1', 'UP', 'High', 2, 2),
+('CEAN-Gampaha-01', 'CEAN', '10.2.1.1', 'UP', 'Avg', 3, 3),
+('MSAN-Colombo-A1', 'MSAN', '10.10.1.1', 'UP', 'Avg', 1, 2),
+('MSAN-Colombo-A2', 'MSAN', '10.10.1.2', 'UP', 'Low', 1, 2),
+('MSAN-Gampaha-A1', 'MSAN', '10.20.1.1', 'UP', 'Avg', 3, 3);
+
+-- Device Links (Topology: SLBN → CEAN → MSAN)
+INSERT INTO DeviceLink (ParentDeviceId, ChildDeviceId, LinkStatus) VALUES 
+(1, 3, 'UP'),
+(1, 4, 'UP'),
+(2, 5, 'UP'),
+(3, 6, 'UP'),
+(3, 7, 'UP'),
+(5, 8, 'UP');
+
+-- Verify data
+SELECT * FROM Region;
+SELECT * FROM Province;
+SELECT * FROM LEA;
+SELECT * FROM Device;
+SELECT * FROM DeviceLink;

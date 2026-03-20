@@ -9,15 +9,16 @@ public class AppDbContext : DbContext
         : base(options) { }
 
     public DbSet<Device> Devices { get; set; }
+    public DbSet<DeviceLink> DeviceLinks { get; set; }
     public DbSet<Region> Regions { get; set; }
     public DbSet<Province> Provinces { get; set; }
     public DbSet<LEA> LEAs { get; set; }
     public DbSet<Alarm> Alarms { get; set; }
-    public DbSet<DeviceLink> DeviceLinks { get; set; }
     public DbSet<RootCause> RootCauses { get; set; }
     public DbSet<ImpactedDevice> ImpactedDevices { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<Role> Roles { get; set; }
+    public DbSet<UserAreaAssignment> UserAreaAssignments { get; set; }
     public DbSet<Heartbeat> Heartbeats { get; set; }
     public DbSet<SimulationEvent> SimulationEvents { get; set; }
 
@@ -33,6 +34,37 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ImpactedDevice>().ToTable("ImpactedDevice");
         modelBuilder.Entity<User>().ToTable("User");
         modelBuilder.Entity<Role>().ToTable("Role");
+        modelBuilder.Entity<UserAreaAssignment>().ToTable("UserAreaAssignment");
+
+        modelBuilder.Entity<Device>()
+            .Property(d => d.PriorityLevel)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<Device>()
+            .Property(d => d.DeviceType)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<Device>()
+            .Property(d => d.Status)
+            .HasConversion<string>();
+
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<DeviceLink>()
+            .HasOne(dl => dl.ParentDevice)
+            .WithMany()
+            .HasForeignKey(dl => dl.ParentDeviceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DeviceLink>()
+            .HasOne(dl => dl.ChildDevice)
+            .WithMany()
+            .HasForeignKey(dl => dl.ChildDeviceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Role>()
+            .Property(r => r.RoleName)
+            .HasColumnName("Name");
         modelBuilder.Entity<Heartbeat>().ToTable("Heartbeat");
         modelBuilder.Entity<SimulationEvent>().ToTable("SimulationEvent");
     }

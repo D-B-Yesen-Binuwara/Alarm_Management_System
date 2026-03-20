@@ -47,8 +47,7 @@ public class DeviceHealthController : ControllerBase
         {
             TotalDevices = devices.Count(),
             OnlineDevices = devices.Count(d => d.Status == Domain.Enums.DeviceStatus.UP),
-            OfflineDevices = devices.Count(d => d.Status == Domain.Enums.DeviceStatus.DOWN),
-            ImpactedDevices = devices.Count(d => d.Status == Domain.Enums.DeviceStatus.IMPACTED)
+            OfflineDevices = devices.Count(d => d.Status == Domain.Enums.DeviceStatus.DOWN)
         };
 
         return Ok(summary);
