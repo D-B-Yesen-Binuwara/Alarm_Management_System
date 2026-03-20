@@ -19,8 +19,6 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Role> Roles { get; set; }
     public DbSet<UserAreaAssignment> UserAreaAssignments { get; set; }
-    public DbSet<Heartbeat> Heartbeats { get; set; }
-    public DbSet<SimulationEvent> SimulationEvents { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,10 +42,6 @@ public class AppDbContext : DbContext
             .Property(d => d.DeviceType)
             .HasConversion<string>();
 
-        modelBuilder.Entity<Device>()
-            .Property(d => d.Status)
-            .HasConversion<string>();
-
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<DeviceLink>()
@@ -65,7 +59,5 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Role>()
             .Property(r => r.RoleName)
             .HasColumnName("Name");
-        modelBuilder.Entity<Heartbeat>().ToTable("Heartbeat");
-        modelBuilder.Entity<SimulationEvent>().ToTable("SimulationEvent");
     }
 }

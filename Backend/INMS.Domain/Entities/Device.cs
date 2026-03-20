@@ -21,9 +21,11 @@ namespace INMS.Domain.Entities
         public string IP { get; set; } = string.Empty;
 
         [Required]
-        public DeviceStatus Status { get; set; } = DeviceStatus.UP;
+        [MaxLength(20)]
+        public string Status { get; set; } = "UP";
 
         [Required]
+        [MaxLength(20)]
         public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.Low;
 
         [ForeignKey("LEA")]
@@ -31,7 +33,5 @@ namespace INMS.Domain.Entities
 
         public int? AssignedUserId { get; set; }
         public User? AssignedUser { get; set; }
-
-        public bool IsSimulatedDown { get; set; } = false;
     }
 }

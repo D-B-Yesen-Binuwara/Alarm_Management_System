@@ -1,3 +1,4 @@
+using INMS.Application.DTOs;
 using INMS.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,28 +16,26 @@ public class UserController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
-    {
-        return Ok(await _service.GetAll());
-    }
+    public async Task<IActionResult> GetAll() => Ok(await _service.GetAll());
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(int id)
     {
-        return Ok(await _service.GetById(id));
+        var user = await _service.GetById(id);
+        return user == null ? NotFound() : Ok(user);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(string username, string password, int roleId)
+    public async Task<IActionResult> Create(CreateUserDto dto)
     {
-        await _service.Create(username, password, roleId);
+        await _service.Create(dto);
         return Ok();
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, string username, int roleId)
+    public async Task<IActionResult> Update(int id, UpdateUserDto dto)
     {
-        await _service.Update(id, username, roleId);
+        await _service.Update(id, dto);
         return Ok();
     }
 
