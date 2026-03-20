@@ -42,10 +42,6 @@ public class AppDbContext : DbContext
             .Property(d => d.DeviceType)
             .HasConversion<string>();
 
-        modelBuilder.Entity<Device>()
-            .Property(d => d.Status)
-            .HasConversion<string>();
-
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<DeviceLink>()

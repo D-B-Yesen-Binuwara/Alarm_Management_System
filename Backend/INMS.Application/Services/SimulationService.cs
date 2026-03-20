@@ -1,8 +1,6 @@
-using INMS.Domain.Entities;
-
 namespace INMS.Application.Services;
 
-public class AlarmService
+public class SimulationService
 {
     // To be implemented in Step 11
 }
