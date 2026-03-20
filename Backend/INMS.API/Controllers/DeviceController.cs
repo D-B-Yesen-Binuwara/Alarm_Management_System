@@ -1,3 +1,4 @@
+using INMS.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using INMS.Application.Interfaces;
 using INMS.Domain.Entities;
@@ -17,48 +18,37 @@ namespace INMS.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var devices = await _deviceService.GetAllAsync();
-            return Ok(devices);
-        }
+        public async Task<IActionResult> GetAll() => Ok(await _deviceService.GetAllAsync());
 
         [HttpGet("visible/{userId}")]
-        public async Task<IActionResult> GetVisible(int userId)
-        {
-            var devices = await _deviceService.GetVisibleDevicesAsync(userId);
-            return Ok(devices);
-        }
+        public async Task<IActionResult> GetVisible(int userId) => Ok(await _deviceService.GetVisibleDevicesAsync(userId));
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
             var device = await _deviceService.GetByIdAsync(id);
-            if (device == null) return NotFound();
-            return Ok(device);
+            return device == null ? NotFound() : Ok(device);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(Device device)
+        public async Task<IActionResult> Create(CreateDeviceDto dto)
         {
-            var created = await _deviceService.CreateAsync(device);
+            var created = await _deviceService.CreateAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = created.DeviceId }, created);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, Device device)
+        public async Task<IActionResult> Update(int id, UpdateDeviceDto dto)
         {
-            var updated = await _deviceService.UpdateAsync(id, device);
-            if (updated == null) return NotFound();
-            return Ok(updated);
+            var updated = await _deviceService.UpdateAsync(id, dto);
+            return updated == null ? NotFound() : Ok(updated);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             var deleted = await _deviceService.DeleteAsync(id);
-            if (!deleted) return NotFound();
-            return NoContent();
+            return deleted ? NoContent() : NotFound();
         }
 
         [HttpPatch("{id}/assign")]

@@ -14,15 +14,24 @@ public class UserAreaAssignmentRepository : IUserAreaAssignmentRepository
         _context = context;
     }
 
+    public async Task<List<UserAreaAssignment>> GetAllAsync()
+        => await _context.UserAreaAssignments.ToListAsync();
+
     public async Task<UserAreaAssignment?> GetByUserId(int userId)
-    {
-        return await _context.UserAreaAssignments
-            .FirstOrDefaultAsync(x => x.UserId == userId);
-    }
+        => await _context.UserAreaAssignments.FirstOrDefaultAsync(x => x.UserId == userId);
+
+    public async Task<UserAreaAssignment?> GetByIdAsync(int assignmentId)
+        => await _context.UserAreaAssignments.FindAsync(assignmentId);
 
     public async Task Create(UserAreaAssignment assignment)
     {
         _context.UserAreaAssignments.Add(assignment);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(UserAreaAssignment assignment)
+    {
+        _context.UserAreaAssignments.Remove(assignment);
         await _context.SaveChangesAsync();
     }
 }
