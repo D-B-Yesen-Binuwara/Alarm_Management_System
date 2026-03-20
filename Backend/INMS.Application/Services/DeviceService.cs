@@ -25,6 +25,21 @@ namespace INMS.Application.Services
 
         public async Task<IEnumerable<Device>> GetAllAsync() => await _deviceRepository.GetAllAsync();
 
+        public async Task<IEnumerable<DeviceMapDto>> GetDevicesForMapAsync()
+        {
+            return await _context.Devices
+                .Select(d => new DeviceMapDto(
+                    d.DeviceId,
+                    d.DeviceName,
+                    d.DeviceType.ToString(),
+                    d.Latitude,
+                    d.Longitude,
+                    d.Status,
+                    _context.ImpactedDevices.Any(id => id.DeviceId == d.DeviceId) ? 1 : 0
+                ))
+                .ToListAsync();
+        }
+
         public async Task<Device?> GetByIdAsync(int id) => await _deviceRepository.GetByIdAsync(id);
 
         public async Task<Device> CreateAsync(CreateDeviceDto dto)
@@ -36,6 +51,8 @@ namespace INMS.Application.Services
                 IP = dto.IP ?? string.Empty,
                 PriorityLevel = dto.PriorityLevel,
                 LEAId = dto.LEAId,
+                Latitude = dto.Latitude,
+                Longitude = dto.Longitude,
                 Status = "UP"
             };
 
@@ -55,6 +72,8 @@ namespace INMS.Application.Services
             existing.Status = dto.Status;
             existing.PriorityLevel = dto.PriorityLevel;
             existing.LEAId = dto.LEAId;
+            existing.Latitude = dto.Latitude;
+            existing.Longitude = dto.Longitude;
 
             await _deviceRepository.UpdateAsync(existing);
             return existing;

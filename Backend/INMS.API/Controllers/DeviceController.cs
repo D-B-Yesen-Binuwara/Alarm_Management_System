@@ -4,7 +4,8 @@ using INMS.Application.Interfaces;
 
 namespace INMS.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/device")]
+    [Route("api/devices")]
     [ApiController]
     public class DeviceController : ControllerBase
     {
@@ -21,7 +22,10 @@ namespace INMS.API.Controllers
         [HttpGet("visible/{userId}")]
         public async Task<IActionResult> GetVisible(int userId) => Ok(await _deviceService.GetVisibleDevicesAsync(userId));
 
-        [HttpGet("{id}")]
+        [HttpGet("map")]
+        public async Task<IActionResult> GetMapData() => Ok(await _deviceService.GetDevicesForMapAsync());
+
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
             var device = await _deviceService.GetByIdAsync(id);
@@ -35,21 +39,21 @@ namespace INMS.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = created.DeviceId }, created);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateDeviceDto dto)
         {
             var updated = await _deviceService.UpdateAsync(id, dto);
             return updated == null ? NotFound() : Ok(updated);
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
             var deleted = await _deviceService.DeleteAsync(id);
             return deleted ? NoContent() : NotFound();
         }
 
-        [HttpPatch("{id}/assign")]
+        [HttpPatch("{id:int}/assign")]
         public async Task<IActionResult> AssignDevice(int id, [FromBody] AssignDeviceRequest request)
         {
             await _deviceService.AssignDeviceAsync(id, request.UserId);

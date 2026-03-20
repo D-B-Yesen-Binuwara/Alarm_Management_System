@@ -2,7 +2,8 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { DeviceService } from '../../core/services/device.service';
+import * as L from 'leaflet';
+import { DeviceMapPoint, DeviceService } from '../../core/services/device.service';
 import { AlarmService } from '../../core/services/alarm.service';
 import { Device } from '../../core/models/device.model';
 import { Alarm } from '../../core/models/alarm.model';
@@ -42,12 +43,20 @@ export class DashboardComponent implements OnInit {
     3: 'Critical'
   };
 
+  private map: L.Map | null = null;
+  private markerLayer = L.layerGroup();
+  private readonly markerShadowUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png';
+  private readonly greenMarkerIconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png';
+  private readonly redMarkerIconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png';
+  private readonly yellowMarkerIconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png';
+
   constructor(
     private deviceService: DeviceService,
     private alarmService: AlarmService
   ) {}
 
   ngOnInit(): void {
+    this.initializeMap();
     this.load();
   }
 
@@ -69,6 +78,64 @@ export class DashboardComponent implements OnInit {
 
     this.alarmService.getAll().subscribe({
       next: (data) => this.alarms.set(data)
+    });
+
+    this.loadMapDevices();
+  }
+
+  private initializeMap(): void {
+    if (this.map) {
+      return;
+    }
+
+    this.map = L.map('map').setView([7.8731, 80.7718], 7);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(this.map);
+
+    this.markerLayer.addTo(this.map);
+  }
+
+  private loadMapDevices(): void {
+    this.deviceService.getDevicesForMap().subscribe({
+      next: (devices) => this.plotMarkers(devices)
+    });
+  }
+
+  private plotMarkers(devices: DeviceMapPoint[]): void {
+    this.markerLayer.clearLayers();
+
+    for (const device of devices) {
+      if (device.latitude == null || device.longitude == null) {
+        continue;
+      }
+
+      L.marker([device.latitude, device.longitude], {
+        icon: this.getMarkerIcon(device.status, device.isImpacted === 1)
+      })
+        .bindPopup(
+          `Device ID: ${device.deviceId}<br>Device Name: ${device.deviceName}<br>Device Type: ${device.deviceType}<br>Status: ${this.normalizeStatus(device.status)}`
+        )
+        .addTo(this.markerLayer);
+    }
+  }
+
+  private getMarkerIcon(status: string, isImpacted: boolean): L.Icon {
+    const iconUrl = isImpacted
+      ? this.yellowMarkerIconUrl
+      : this.normalizeStatus(status) === 'DOWN'
+        ? this.redMarkerIconUrl
+        : this.greenMarkerIconUrl;
+
+    return L.icon({
+      iconUrl,
+      shadowUrl: this.markerShadowUrl,
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
     });
   }
 

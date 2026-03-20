@@ -28,6 +28,9 @@ namespace INMS.Domain.Entities
         [MaxLength(20)]
         public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.Low;
 
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+
         [ForeignKey("LEA")]
         public int LEAId { get; set; }
 

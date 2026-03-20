@@ -6,5 +6,7 @@ export interface Device {
   status: string;    // 'UP' | 'DOWN'
   priorityLevel: string;  // 'Low' | 'Medium' | 'High' | 'Critical'
   leaId: number;
+  latitude?: number | null;
+  longitude?: number | null;
   assignedUserId?: number;
 }
