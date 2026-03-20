@@ -1,7 +1,6 @@
 using INMS.Application.DTOs;
 using INMS.Application.Interfaces;
 using INMS.Domain.Entities;
-using INMS.Domain.Enums;
 using INMS.Domain.Interfaces;
 using INMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -103,15 +102,6 @@ namespace INMS.Application.Services
                 "Region"   => await _deviceRepository.GetDevicesByRegionAsync(assignment.AreaId),
                 _          => new List<Device>()
             };
-        }
-        public async Task<Device?> UpdateStatusAsync(int id, DeviceStatus status)
-        {
-            var device = await _context.Devices.FindAsync(id);
-            if (device == null) return null;
-
-            device.Status = status;
-            await _context.SaveChangesAsync();
-            return device;
         }
     }
 }
