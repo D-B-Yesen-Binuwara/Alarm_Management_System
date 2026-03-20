@@ -47,12 +47,6 @@ public class HeartbeatSchedulerService : BackgroundService
 
         foreach (var device in devices)
         {
-            if (device.IsSimulatedDown)
-            {
-                _logger.LogDebug($"Device {device.DeviceId} is simulated down - skipping heartbeat");
-                continue;
-            }
-
             // Record heartbeat regardless of current status
             // This allows automatic recovery detection
             await heartbeatService.RecordHeartbeatAsync(device.DeviceId, "UP");
