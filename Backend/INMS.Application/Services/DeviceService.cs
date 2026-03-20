@@ -66,6 +66,8 @@ namespace INMS.Application.Services
             var existing = await _deviceRepository.GetByIdAsync(id);
             if (existing == null) return null;
 
+            var shouldPropagateImpact = string.Equals(dto.Status, "DOWN", StringComparison.OrdinalIgnoreCase);
+
             existing.DeviceName = dto.DeviceName;
             existing.DeviceType = dto.DeviceType;
             existing.IP = dto.IP ?? string.Empty;
@@ -76,7 +78,96 @@ namespace INMS.Application.Services
             existing.Longitude = dto.Longitude;
 
             await _deviceRepository.UpdateAsync(existing);
+
+            if (shouldPropagateImpact)
+            {
+                await PropagateImpact(id);
+            }
+
             return existing;
+        }
+
+        public async Task PropagateImpact(int rootDeviceId)
+        {
+            var allLinks = await _context.DeviceLinks
+                .AsNoTracking()
+                .ToListAsync();
+
+            var impactedDeviceIds = GetDownstreamDeviceIds(rootDeviceId, allLinks);
+
+            // Rebuild the impacted rows for this root device to keep records current.
+            var existingRows = await _context.ImpactedDevices
+                .Where(x => x.RootCauseId == rootDeviceId)
+                .ToListAsync();
+
+            if (existingRows.Count > 0)
+            {
+                _context.ImpactedDevices.RemoveRange(existingRows);
+            }
+
+            if (impactedDeviceIds.Count == 0)
+            {
+                await _context.SaveChangesAsync();
+                return;
+            }
+
+            var impactedRows = impactedDeviceIds
+                .Select(deviceId => new ImpactedDevice
+                {
+                    RootCauseId = rootDeviceId,
+                    DeviceId = deviceId,
+                    ImpactType = "DOWNSTREAM"
+                })
+                .ToList();
+
+            await _context.ImpactedDevices.AddRangeAsync(impactedRows);
+            await _context.SaveChangesAsync();
+        }
+
+        private static HashSet<int> GetDownstreamDeviceIds(
+            int rootDeviceId,
+            IEnumerable<DeviceLink> links)
+        {
+            var adjacency = new Dictionary<int, List<int>>();
+
+            foreach (var link in links)
+            {
+                if (!adjacency.TryGetValue(link.ParentDeviceId, out var children))
+                {
+                    children = new List<int>();
+                    adjacency[link.ParentDeviceId] = children;
+                }
+
+                children.Add(link.ChildDeviceId);
+            }
+
+            var visited = new HashSet<int> { rootDeviceId };
+            var impacted = new HashSet<int>();
+            var queue = new Queue<int>();
+            queue.Enqueue(rootDeviceId);
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+
+                if (!adjacency.TryGetValue(current, out var children))
+                {
+                    continue;
+                }
+
+                foreach (var childId in children)
+                {
+                    if (!visited.Add(childId))
+                    {
+                        continue;
+                    }
+
+                    impacted.Add(childId);
+                    queue.Enqueue(childId);
+                }
+            }
+
+            return impacted;
         }
 
         public async Task<bool> DeleteAsync(int id)
