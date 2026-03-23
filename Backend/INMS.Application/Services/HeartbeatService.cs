@@ -1,4 +1,3 @@
-
 using INMS.Domain.Entities;
 using INMS.Domain.Interfaces;
 using INMS.Application.Interfaces;
@@ -33,7 +32,7 @@ public class HeartbeatService : IHeartbeatService
 
     public async Task<Heartbeat> GetLatestHeartbeatAsync(int deviceId)
     {
-        return await _repository.GetLatestByDeviceIdAsync(deviceId);
+        return (await _repository.GetLatestByDeviceIdAsync(deviceId))!;
     }
 
     public async Task<Dictionary<int, Heartbeat>> GetLatestHeartbeatsForAllDevicesAsync()

@@ -29,7 +29,7 @@ public class HeartbeatRepository : IHeartbeatRepository
             .ToListAsync();
     }
 
-    public async Task<Heartbeat> GetLatestByDeviceIdAsync(int deviceId)
+    public async Task<Heartbeat?> GetLatestByDeviceIdAsync(int deviceId)
     {
         return await _context.Heartbeats
             .Where(h => h.DeviceId == deviceId)
@@ -43,7 +43,7 @@ public class HeartbeatRepository : IHeartbeatRepository
             .GroupBy(h => h.DeviceId)
             .Select(g => g.OrderByDescending(h => h.Timestamp).FirstOrDefault())
             .Where(h => h != null)
-            .ToDictionaryAsync(h => h.DeviceId);
+            .ToDictionaryAsync(h => h!.DeviceId, h => h!);
 
         return latestHeartbeats;
     }
