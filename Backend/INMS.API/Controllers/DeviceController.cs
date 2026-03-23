@@ -1,6 +1,7 @@
-using INMS.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using INMS.Application.Interfaces;
+using INMS.Domain.Entities;
+using INMS.Domain.Enums;
 
 namespace INMS.API.Controllers
 {
@@ -16,37 +17,48 @@ namespace INMS.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll() => Ok(await _deviceService.GetAllAsync());
+        public async Task<IActionResult> GetAll()
+        {
+            var devices = await _deviceService.GetAllAsync();
+            return Ok(devices);
+        }
 
         [HttpGet("visible/{userId}")]
-        public async Task<IActionResult> GetVisible(int userId) => Ok(await _deviceService.GetVisibleDevicesAsync(userId));
+        public async Task<IActionResult> GetVisible(int userId)
+        {
+            var devices = await _deviceService.GetVisibleDevicesAsync(userId);
+            return Ok(devices);
+        }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
             var device = await _deviceService.GetByIdAsync(id);
-            return device == null ? NotFound() : Ok(device);
+            if (device == null) return NotFound();
+            return Ok(device);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(CreateDeviceDto dto)
+        public async Task<IActionResult> Create(Device device)
         {
-            var created = await _deviceService.CreateAsync(dto);
+            var created = await _deviceService.CreateAsync(device);
             return CreatedAtAction(nameof(GetById), new { id = created.DeviceId }, created);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, UpdateDeviceDto dto)
+        public async Task<IActionResult> Update(int id, Device device)
         {
-            var updated = await _deviceService.UpdateAsync(id, dto);
-            return updated == null ? NotFound() : Ok(updated);
+            var updated = await _deviceService.UpdateAsync(id, device);
+            if (updated == null) return NotFound();
+            return Ok(updated);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             var deleted = await _deviceService.DeleteAsync(id);
-            return deleted ? NoContent() : NotFound();
+            if (!deleted) return NotFound();
+            return NoContent();
         }
 
         [HttpPatch("{id}/assign")]
@@ -56,9 +68,43 @@ namespace INMS.API.Controllers
             return Ok("Device assigned successfully");
         }
 
+        [HttpPost("{id}/simulate-failure")]
+        public async Task<IActionResult> SimulateFailure(int id)
+        {
+            var device = await _deviceService.GetByIdAsync(id);
+            if (device == null) return NotFound();
+            
+            device.IsSimulatedDown = true;
+            await _deviceService.UpdateAsync(id, device);
+            return Ok(new { message = "Device failure simulation started", deviceId = id });
+        }
+
+        [HttpPost("{id}/recover")]
+        public async Task<IActionResult> Recover(int id)
+        {
+            var device = await _deviceService.GetByIdAsync(id);
+            if (device == null) return NotFound();
+            
+            device.IsSimulatedDown = false;
+            await _deviceService.UpdateAsync(id, device);
+            return Ok(new { message = "Device recovery simulation started", deviceId = id });
+        }
+
         public class AssignDeviceRequest
         {
             public int UserId { get; set; }
         }
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest request)
+        {
+            var updated = await _deviceService.UpdateStatusAsync(id, request.Status);
+            if (updated == null) return NotFound();
+            return Ok(updated);
+        }
+    }
+
+    public class UpdateStatusRequest
+    {
+        public DeviceStatus Status { get; set; }
     }
 }

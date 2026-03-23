@@ -1,12 +1,12 @@
-using INMS.Application.DTOs;
+using INMS.Domain.Entities;
 
 namespace INMS.Application.Services;
 
 public interface IUserService
 {
-    Task<List<UserResponseDto>> GetAll();
-    Task<UserResponseDto?> GetById(int id);
-    Task Create(CreateUserDto dto);
-    Task Update(int id, UpdateUserDto dto);
+    Task<List<User>> GetAll();
+    Task<User> GetById(int id);
+    Task Create(string username, string password, int roleId);
+    Task Update(int id, string username, int roleId);
     Task Delete(int id);
 }
