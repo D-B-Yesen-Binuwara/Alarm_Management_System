@@ -68,6 +68,10 @@ CREATE TABLE Device (
         FOREIGN KEY (AssignedUserId) REFERENCES [User](UserId)
 );
 
+ALTER TABLE Device
+ADD Latitude DECIMAL(9,6) NULL,
+    Longitude DECIMAL(9,6) NULL;
+
 /* TOPOLOGY LINKS --------------------------------------------------------------------- */
 CREATE TABLE DeviceLink (
     LinkId INT IDENTITY(1,1) PRIMARY KEY,
