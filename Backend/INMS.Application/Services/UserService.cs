@@ -1,4 +1,3 @@
-using INMS.Application.DTOs;
 using INMS.Domain.Entities;
 using INMS.Domain.Interfaces;
 using System.Security.Cryptography;
@@ -15,45 +14,44 @@ public class UserService : IUserService
         _repository = repository;
     }
 
-    public async Task<List<UserResponseDto>> GetAll()
+    public async Task<List<User>> GetAll()
     {
-        var users = await _repository.GetAll();
-        return users.Select(ToDto).ToList();
+        return await _repository.GetAll();
     }
 
-    public async Task<UserResponseDto?> GetById(int id)
+    public async Task<User> GetById(int id)
     {
-        var user = await _repository.GetById(id);
-        return user == null ? null : ToDto(user);
+        return (await _repository.GetById(id))!;
     }
 
-    public async Task Create(CreateUserDto dto)
+    public async Task Create(string username, string password, int roleId)
     {
         var user = new User
         {
-            Username = dto.Username,
-            PasswordHash = HashPassword(dto.Password),
-            FullName = dto.FullName,
-            RoleId = dto.RoleId
+            Username = username,
+            PasswordHash = HashPassword(password),
+            RoleId = roleId
         };
+
         await _repository.Create(user);
     }
 
-    public async Task Update(int id, UpdateUserDto dto)
+    public async Task Update(int id, string username, int roleId)
     {
         var user = await _repository.GetById(id);
-        user.Username = dto.Username;
-        user.FullName = dto.FullName;
-        user.RoleId = dto.RoleId;
+
+        user!.Username = username;
+        user.RoleId = roleId;
+
         await _repository.Update(user);
     }
 
-    public async Task Delete(int id) => await _repository.Delete(id);
+    public async Task Delete(int id)
+    {
+        await _repository.Delete(id);
+    }
 
-    private static UserResponseDto ToDto(User u) =>
-        new(u.UserId, u.Username, u.FullName, u.RoleId, u.Role?.RoleName);
-
-    private static string HashPassword(string password)
+    private string HashPassword(string password)
     {
         using SHA256 sha = SHA256.Create();
         var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(password));

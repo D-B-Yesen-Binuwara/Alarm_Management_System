@@ -1,5 +1,5 @@
-using INMS.Application.DTOs;
 using INMS.Application.Interfaces;
+using INMS.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace INMS.API.Controllers
@@ -16,26 +16,30 @@ namespace INMS.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll() => Ok(await _roleService.GetAllAsync());
+        public async Task<IActionResult> GetAll()
+        {
+            return Ok(await _roleService.GetAllAsync());
+        }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
             var role = await _roleService.GetByIdAsync(id);
-            return role == null ? NotFound() : Ok(role);
+            if (role == null) return NotFound();
+            return Ok(role);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(CreateRoleDto dto)
+        public async Task<IActionResult> Create(Role role)
         {
-            var created = await _roleService.CreateAsync(dto);
+            var created = await _roleService.CreateAsync(role);
             return CreatedAtAction(nameof(GetById), new { id = created.RoleId }, created);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, UpdateRoleDto dto)
+        public async Task<IActionResult> Update(int id, Role role)
         {
-            var updated = await _roleService.UpdateAsync(id, dto);
+            var updated = await _roleService.UpdateAsync(id, role);
             return Ok(updated);
         }
 

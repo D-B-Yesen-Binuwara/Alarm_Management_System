@@ -1,6 +1,6 @@
-using INMS.Application.DTOs;
 using INMS.Application.Interfaces;
 using INMS.Domain.Entities;
+using INMS.Domain.Enums;
 using INMS.Domain.Interfaces;
 using INMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +23,10 @@ namespace INMS.Application.Services
             _assignmentRepository = assignmentRepository;
         }
 
-        public async Task<IEnumerable<Device>> GetAllAsync() => await _deviceRepository.GetAllAsync();
+        public async Task<IEnumerable<Device>> GetAllAsync()
+        {
+            return await _deviceRepository.GetAllAsync();
+        }
 
         public async Task<IEnumerable<DeviceMapDto>> GetDevicesForMapAsync()
         {
@@ -42,9 +45,9 @@ namespace INMS.Application.Services
 
         public async Task<Device?> GetByIdAsync(int id) => await _deviceRepository.GetByIdAsync(id);
 
-        public async Task<Device> CreateAsync(CreateDeviceDto dto)
+        public async Task<Device> CreateAsync(Device device)
         {
-            var device = new Device
+            if (device.AssignedUserId.HasValue)
             {
                 DeviceName = dto.DeviceName,
                 DeviceType = dto.DeviceType,
@@ -61,7 +64,7 @@ namespace INMS.Application.Services
             return device;
         }
 
-        public async Task<Device?> UpdateAsync(int id, UpdateDeviceDto dto)
+        public async Task<Device?> UpdateAsync(int id, Device device)
         {
             var existing = await _deviceRepository.GetByIdAsync(id);
             if (existing == null) return null;
@@ -226,11 +229,11 @@ namespace INMS.Application.Services
 
         public async Task AssignDeviceAsync(int deviceId, int userId)
         {
-            var device = await _deviceRepository.GetByIdAsync(deviceId)
-                ?? throw new Exception("Device not found");
+            var device = await _deviceRepository.GetByIdAsync(deviceId);
+            if (device == null) throw new Exception("Device not found");
 
-            var user = await _context.Users.FindAsync(userId)
-                ?? throw new Exception("User not found");
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) throw new Exception("User not found");
 
             device.AssignedUserId = userId;
             await _deviceRepository.UpdateAsync(device);
@@ -238,16 +241,10 @@ namespace INMS.Application.Services
 
         public async Task<List<Device>> GetVisibleDevicesAsync(int userId)
         {
-            var user = await _context.Users
-                .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.UserId == userId)
-                ?? throw new Exception("User not found.");
-
-            if (user.Role?.RoleName == "Admin")
-                return await _deviceRepository.GetAllAsync();
-
             var assignment = await _assignmentRepository.GetByUserId(userId);
-            if (assignment == null) return new List<Device>();
+
+            if (assignment == null)
+                return new List<Device>();
 
             return assignment.AreaType switch
             {
@@ -256,6 +253,15 @@ namespace INMS.Application.Services
                 "Region"   => await _deviceRepository.GetDevicesByRegionAsync(assignment.AreaId),
                 _          => new List<Device>()
             };
+        }
+        public async Task<Device?> UpdateStatusAsync(int id, DeviceStatus status)
+        {
+            var device = await _context.Devices.FindAsync(id);
+            if (device == null) return null;
+
+            device.Status = status;
+            await _context.SaveChangesAsync();
+            return device;
         }
     }
 }
