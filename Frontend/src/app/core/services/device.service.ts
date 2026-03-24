@@ -33,7 +33,7 @@ export class DeviceService {
   }
 
   getDevicesForMap(): Observable<DeviceMapPoint[]> {
-    return this.http.get<DeviceMapPoint[]>(`${environment.apiUrl}/devices/map`);
+    return this.http.get<DeviceMapPoint[]>(`${this.url}/map`);
   }
 
   create(device: Partial<Device>): Observable<Device> {

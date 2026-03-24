@@ -5,7 +5,6 @@ using INMS.Application.Interfaces;
 namespace INMS.API.Controllers
 {
     [Route("api/device")]
-    [Route("api/devices")]
     [ApiController]
     public class DeviceController : ControllerBase
     {

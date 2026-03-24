@@ -81,11 +81,11 @@ export class DashboardComponent implements OnInit {
   }
 
   get activeNodes(): number {
-    return this.devices().filter(d => this.normalizeStatus(d.status) === 'UP').length;
+    return this.devices().filter(d => this.isUpStatus(d.status)).length;
   }
 
   get failedNodes(): number {
-    return this.devices().filter(d => this.normalizeStatus(d.status) === 'DOWN').length;
+    return this.devices().filter(d => this.isDownStatus(d.status)).length;
   }
 
   get activeAlarms(): number {
@@ -139,7 +139,7 @@ export class DashboardComponent implements OnInit {
   }
 
   getStatusBadgeClass(status: string): string {
-    return this.normalizeStatus(status) === 'UP'
+    return this.isUpStatus(status)
       ? 'bg-green-100 text-green-800'
       : 'bg-red-100 text-red-800';
   }
@@ -187,6 +187,26 @@ export class DashboardComponent implements OnInit {
   }
 
   normalizeStatus(status: string | number | null | undefined): string {
-    return String(status ?? '').toUpperCase();
+    const normalized = String(status ?? '').trim().toUpperCase();
+
+    if (this.isUpStatus(normalized)) {
+      return 'UP';
+    }
+
+    if (this.isDownStatus(normalized)) {
+      return 'DOWN';
+    }
+
+    return normalized;
+  }
+
+  private isUpStatus(status: string | number | null | undefined): boolean {
+    const value = String(status ?? '').trim().toUpperCase();
+    return value === 'UP' || value === 'ONLINE' || value === 'ALIVE' || value === '1' || value === 'TRUE';
+  }
+
+  private isDownStatus(status: string | number | null | undefined): boolean {
+    const value = String(status ?? '').trim().toUpperCase();
+    return value === 'DOWN' || value === 'OFFLINE' || value === 'DEAD' || value === 'FAILED' || value === '0' || value === 'FALSE';
   }
 }

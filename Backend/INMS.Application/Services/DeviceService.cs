@@ -94,10 +94,11 @@ namespace INMS.Application.Services
                 .ToListAsync();
 
             var impactedDeviceIds = GetDownstreamDeviceIds(rootDeviceId, allLinks);
+            var rootCauseId = await EnsureRootCauseAsync(rootDeviceId);
 
             // Rebuild the impacted rows for this root device to keep records current.
             var existingRows = await _context.ImpactedDevices
-                .Where(x => x.RootCauseId == rootDeviceId)
+                .Where(x => x.RootCauseId == rootCauseId)
                 .ToListAsync();
 
             if (existingRows.Count > 0)
@@ -114,7 +115,7 @@ namespace INMS.Application.Services
             var impactedRows = impactedDeviceIds
                 .Select(deviceId => new ImpactedDevice
                 {
-                    RootCauseId = rootDeviceId,
+                    RootCauseId = rootCauseId,
                     DeviceId = deviceId,
                     ImpactType = "DOWNSTREAM"
                 })
@@ -122,6 +123,49 @@ namespace INMS.Application.Services
 
             await _context.ImpactedDevices.AddRangeAsync(impactedRows);
             await _context.SaveChangesAsync();
+        }
+
+        private async Task<int> EnsureRootCauseAsync(int rootDeviceId)
+        {
+            var activeAlarm = await _context.Alarms
+                .Where(a => a.DeviceId == rootDeviceId && a.IsActive && a.AlarmType == "NODE_DOWN")
+                .OrderByDescending(a => a.RaisedTime)
+                .FirstOrDefaultAsync();
+
+            if (activeAlarm == null)
+            {
+                activeAlarm = new Alarm
+                {
+                    DeviceId = rootDeviceId,
+                    AlarmType = "NODE_DOWN",
+                    RaisedTime = DateTime.UtcNow,
+                    IsActive = true
+                };
+
+                await _context.Alarms.AddAsync(activeAlarm);
+                await _context.SaveChangesAsync();
+            }
+
+            var rootCause = await _context.RootCauses
+                .Where(rc => rc.AlarmId == activeAlarm.AlarmId)
+                .OrderByDescending(rc => rc.DetectedTime)
+                .FirstOrDefaultAsync();
+
+            if (rootCause == null)
+            {
+                rootCause = new RootCause
+                {
+                    AlarmId = activeAlarm.AlarmId,
+                    RootCauseDeviceId = rootDeviceId,
+                    RootCauseType = "NODE_FAILURE",
+                    DetectedTime = DateTime.UtcNow
+                };
+
+                await _context.RootCauses.AddAsync(rootCause);
+                await _context.SaveChangesAsync();
+            }
+
+            return rootCause.RootCauseId;
         }
 
         private static HashSet<int> GetDownstreamDeviceIds(

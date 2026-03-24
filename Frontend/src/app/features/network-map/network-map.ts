@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, signal } from '@angular/core';
+import { Component, AfterViewInit, ElementRef, OnDestroy, ViewChild, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import * as L from 'leaflet';
 import { DeviceMapPoint, DeviceService } from '../../core/services/device.service';
@@ -9,12 +9,15 @@ import { DeviceMapPoint, DeviceService } from '../../core/services/device.servic
   imports: [CommonModule],
   templateUrl: './network-map.html'
 })
-export class NetworkMapComponent implements AfterViewInit {
+export class NetworkMapComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef<HTMLDivElement>;
+
   loading = signal(true);
   error = signal<string | null>(null);
 
   private map: L.Map | null = null;
   private markerLayer = L.layerGroup();
+  private pendingDevices: DeviceMapPoint[] = [];
   private readonly markerShadowUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png';
   private readonly greenMarkerIconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png';
   private readonly redMarkerIconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png';
@@ -28,32 +31,44 @@ export class NetworkMapComponent implements AfterViewInit {
     this.loadMapDevices();
   }
 
+  ngOnDestroy(): void {
+    if (this.map) {
+      this.map.remove();
+      this.map = null;
+    }
+  }
+
   private initializeMap(): void {
     if (this.map) {
       return;
     }
 
-    setTimeout(() => {
-      this.map = L.map('map').setView([7.8731, 80.7718], 7);
+    this.map = L.map(this.mapContainer.nativeElement).setView([7.8731, 80.7718], 7);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(this.map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(this.map);
 
-      this.markerLayer.addTo(this.map);
-      
-      // Invalidate size to ensure map renders correctly
-      if (this.map) {
-        this.map.invalidateSize();
-      }
-    }, 150);
+    this.markerLayer.addTo(this.map);
+
+    if (this.pendingDevices.length > 0) {
+      this.plotMarkers(this.pendingDevices);
+      this.pendingDevices = [];
+    }
+
+    setTimeout(() => this.map?.invalidateSize(), 0);
   }
 
   private loadMapDevices(): void {
     this.deviceService.getDevicesForMap().subscribe({
       next: (devices) => {
-        this.plotMarkers(devices);
+        if (this.map) {
+          this.plotMarkers(devices);
+          this.map.invalidateSize();
+        } else {
+          this.pendingDevices = devices;
+        }
         this.loading.set(false);
       },
       error: (err) => {
