@@ -4,6 +4,16 @@ import { Observable } from 'rxjs';
 import { Device } from '../models/device.model';
 import { environment } from '../../../environments/environment';
 
+export interface DeviceMapPoint {
+  deviceId: number;
+  deviceName: string;
+  deviceType: string;
+  latitude: number;
+  longitude: number;
+  status: string;
+  isImpacted: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DeviceService {
   private readonly url = `${environment.apiUrl}/device`;
@@ -20,6 +30,10 @@ export class DeviceService {
 
   getVisibleDevices(userId: number): Observable<Device[]> {
     return this.http.get<Device[]>(`${this.url}/visible/${userId}`);
+  }
+
+  getDevicesForMap(): Observable<DeviceMapPoint[]> {
+    return this.http.get<DeviceMapPoint[]>(`${this.url}/map`);
   }
 
   create(device: Partial<Device>): Observable<Device> {
