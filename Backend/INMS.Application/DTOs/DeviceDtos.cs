@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using INMS.Domain.Enums;
 
 namespace INMS.Application.DTOs;
@@ -8,8 +9,10 @@ public record CreateDeviceDto(
 	string? IP,
 	PriorityLevel PriorityLevel,
 	int LEAId,
-	decimal? Latitude,
-	decimal? Longitude
+	[Range(-90, 90, ErrorMessage = "Latitude must be between -90 and 90")]
+	decimal Latitude,
+	[Range(-180, 180, ErrorMessage = "Longitude must be between -180 and 180")]
+	decimal Longitude
 );
 
 public record UpdateDeviceDto(
@@ -19,16 +22,18 @@ public record UpdateDeviceDto(
 	string Status,
 	PriorityLevel PriorityLevel,
 	int LEAId,
-	decimal? Latitude,
-	decimal? Longitude
+	[Range(-90, 90, ErrorMessage = "Latitude must be between -90 and 90")]
+	decimal Latitude,
+	[Range(-180, 180, ErrorMessage = "Longitude must be between -180 and 180")]
+	decimal Longitude
 );
 
 public record DeviceMapDto(
 	int DeviceId,
 	string DeviceName,
 	string DeviceType,
-	decimal? Latitude,
-	decimal? Longitude,
+	decimal Latitude,
+	decimal Longitude,
 	string Status,
 	int IsImpacted
 );

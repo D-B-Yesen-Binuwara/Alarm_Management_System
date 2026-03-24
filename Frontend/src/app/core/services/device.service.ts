@@ -8,8 +8,8 @@ export interface DeviceMapPoint {
   deviceId: number;
   deviceName: string;
   deviceType: string;
-  latitude: number | null;
-  longitude: number | null;
+  latitude: number;
+  longitude: number;
   status: string;
   isImpacted: number;
 }

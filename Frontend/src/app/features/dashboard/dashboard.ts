@@ -108,10 +108,6 @@ export class DashboardComponent implements OnInit {
     this.markerLayer.clearLayers();
 
     for (const device of devices) {
-      if (device.latitude == null || device.longitude == null) {
-        continue;
-      }
-
       L.marker([device.latitude, device.longitude], {
         icon: this.getMarkerIcon(device.status, device.isImpacted === 1)
       })
