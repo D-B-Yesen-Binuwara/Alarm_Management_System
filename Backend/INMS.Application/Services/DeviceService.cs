@@ -31,17 +31,78 @@ namespace INMS.Application.Services
 
         public async Task<IEnumerable<DeviceMapDto>> GetDevicesForMapAsync()
         {
-            return await _context.Devices
-                .Select(d => new DeviceMapDto(
+            var devices = await _context.Devices
+                .AsNoTracking()
+                .Select(d => new
+                {
                     d.DeviceId,
                     d.DeviceName,
-                    d.DeviceType.ToString(),
+                    d.DeviceType,
                     d.Latitude,
                     d.Longitude,
-                    d.Status.ToString(),
-                    _context.ImpactedDevices.Any(id => id.DeviceId == d.DeviceId) ? 1 : 0
-                ))
+                    d.Status
+                })
                 .ToListAsync();
+
+            var links = await _context.DeviceLinks
+                .AsNoTracking()
+                .Select(l => new { l.ParentDeviceId, l.ChildDeviceId })
+                .ToListAsync();
+
+            var adjacency = new Dictionary<int, List<int>>();
+            foreach (var link in links)
+            {
+                if (!adjacency.TryGetValue(link.ParentDeviceId, out var children))
+                {
+                    children = new List<int>();
+                    adjacency[link.ParentDeviceId] = children;
+                }
+
+                children.Add(link.ChildDeviceId);
+            }
+
+            var impactedByDownRoots = new HashSet<int>();
+            var downRootIds = devices
+                .Where(d => d.Status == DeviceStatus.DOWN)
+                .Select(d => d.DeviceId)
+                .ToList();
+
+            foreach (var rootId in downRootIds)
+            {
+                var visited = new HashSet<int> { rootId };
+                var queue = new Queue<int>();
+                queue.Enqueue(rootId);
+
+                while (queue.Count > 0)
+                {
+                    var current = queue.Dequeue();
+                    if (!adjacency.TryGetValue(current, out var children))
+                    {
+                        continue;
+                    }
+
+                    foreach (var childId in children)
+                    {
+                        if (!visited.Add(childId))
+                        {
+                            continue;
+                        }
+
+                        impactedByDownRoots.Add(childId);
+                        queue.Enqueue(childId);
+                    }
+                }
+            }
+
+            return devices.Select(d => new DeviceMapDto(
+                d.DeviceId,
+                d.DeviceName,
+                d.DeviceType.ToString(),
+                d.Latitude,
+                d.Longitude,
+                d.Status.ToString(),
+                d.Status == DeviceStatus.DOWN ? 0 : (impactedByDownRoots.Contains(d.DeviceId) ? 1 : 0)
+            ));
         }
 
         public async Task<Device?> GetByIdAsync(int id) => await _deviceRepository.GetByIdAsync(id);
