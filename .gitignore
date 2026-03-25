@@ -1,0 +1,64 @@
+# =========================
+# NODE / REACT
+# =========================
+node_modules/
+dist/
+dist-ssr/
+build/
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =========================
+# ENV FILES
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# EDITOR / IDE
+# =========================
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+
+# Visual Studio (VERY IMPORTANT)
+.vs/
+
+# JetBrains
+.idea/
+
+# Visual Studio files
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Swap files
+*.sw?
+
+# =========================
+# CACHE
+# =========================
+.cache/
+.temp/
+
+# =========================
+# MISC
+# =========================
+coverage/
