@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using INMS.Infrastructure.Persistence;
 using System.Linq;
+using INMS.Infrastructure.Persistence;
 
 namespace INMS.API.Controllers
 {
@@ -18,14 +18,22 @@ namespace INMS.API.Controllers
         [HttpGet]
         public IActionResult GetGraph()
         {
-            var devices = _context.Devices.ToList();        // ✅ FIXED
-            var links = _context.DeviceLinks.ToList();      // ✅ FIXED
+            var devices = _context.Devices.ToList();
+            var links = _context.DeviceLinks.ToList();
 
-            return Ok(new
+            var nodes = devices.Select(d => new
             {
-                devices,
-                links
+                id = d.DeviceId,
+                label = d.DeviceName
             });
+
+            var edges = links.Select(l => new
+            {
+                from = l.ParentDeviceId,
+                to = l.ChildDeviceId
+            });
+
+            return Ok(new { nodes, edges });
         }
     }
 }

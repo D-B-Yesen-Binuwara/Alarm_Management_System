@@ -1,5 +1,5 @@
+using INMS.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using INMS.Infrastructure.Services;
 
 namespace INMS.API.Controllers
 {
@@ -7,19 +7,19 @@ namespace INMS.API.Controllers
     [Route("api/[controller]")]
     public class ImpactController : ControllerBase
     {
-        private readonly ImpactService _impactService;
+        private readonly IImpactService _impactService;
 
-        public ImpactController(ImpactService impactService)
+        public ImpactController(IImpactService impactService)
         {
             _impactService = impactService;
         }
 
         [HttpGet("{deviceId}")]
-        public IActionResult GetImpact(int deviceId)
+        public async Task<IActionResult> GetImpact(int deviceId)
         {
-            var impacted = _impactService.GetDirectImpacts(deviceId);
+            var result = await _impactService.GetImpactedDevices(deviceId);
 
-            return Ok(impacted);
+            return Ok(result);
         }
     }
 }

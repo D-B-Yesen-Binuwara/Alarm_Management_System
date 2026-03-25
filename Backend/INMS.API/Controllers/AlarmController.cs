@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using INMS.Application.Services;
-using INMS.Infrastructure.Services;
+using INMS.Application.Interfaces;
 
 namespace INMS.API.Controllers
 {
@@ -8,30 +7,19 @@ namespace INMS.API.Controllers
     [Route("api/[controller]")]
     public class AlarmController : ControllerBase
     {
-        private readonly CorrelationService _correlationService;
-        private readonly ImpactService _impactService;
+        private readonly IImpactService _impactService;
 
-        public AlarmController(
-            CorrelationService correlationService,
-            ImpactService impactService)
+        public AlarmController(IImpactService impactService)
         {
-            _correlationService = correlationService;
             _impactService = impactService;
         }
 
-        [HttpGet("{deviceId}")]
-        public IActionResult ProcessAlarm(int deviceId)
+        [HttpGet("impact/{deviceId}")]
+        public async Task<IActionResult> GetImpact(int deviceId)
         {
-            var rootCause = _correlationService.FindRootCause(deviceId);
+            var impacts = await _impactService.GetImpactedDevices(deviceId);
 
-            var impactedDevices = _impactService.GetDirectImpacts(rootCause);
-
-            return Ok(new
-            {
-                AlarmDevice = deviceId,
-                RootCauseDevice = rootCause,
-                ImpactedDevices = impactedDevices
-            });
+            return Ok(impacts);
         }
     }
 }

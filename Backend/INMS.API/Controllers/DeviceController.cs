@@ -4,8 +4,8 @@ using System.Linq;
 
 namespace INMS.API.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class DeviceController : ControllerBase
     {
         private readonly AppDbContext _context;

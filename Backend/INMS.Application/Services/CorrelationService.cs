@@ -1,5 +1,5 @@
-﻿using INMS.Infrastructure.Persistence;
-using System.Linq;
+﻿using System.Linq;
+using INMS.Infrastructure.Persistence;
 
 namespace INMS.Application.Services
 {
@@ -14,13 +14,20 @@ namespace INMS.Application.Services
 
         public int FindRootCause(int deviceId)
         {
-            var link = _context.DeviceLinks
-                .FirstOrDefault(x => x.ChildDeviceId == deviceId);
+            int current = deviceId;
 
-            if (link == null)
-                return deviceId;
+            while (true)
+            {
+                var parent = _context.DeviceLinks
+                    .FirstOrDefault(x => x.ChildDeviceId == current);
 
-            return FindRootCause(link.ParentDeviceId);
+                if (parent == null)
+                    break;
+
+                current = parent.ParentDeviceId;
+            }
+
+            return current;
         }
     }
 }
