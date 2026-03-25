@@ -56,7 +56,7 @@ CREATE TABLE Device (
     DeviceName NVARCHAR(150) NOT NULL,
     DeviceType NVARCHAR(50) NOT NULL,  -- SLBN | CEAN | MSAN | CUSTOMER
     IP NVARCHAR(50),
-    Status NVARCHAR(20) NOT NULL DEFAULT 'UP', -- UP | DOWN | IMPACTED
+    Status NVARCHAR(20) NOT NULL DEFAULT 'UP', -- UP | DOWN | UNREACHABLE
     PriorityLevel NVARCHAR(20) NOT NULL DEFAULT 'LOW', -- LOW | AVERAGE | HIGH | CRITICAL
     LEAId INT NOT NULL,
     AssignedUserId INT NULL,
@@ -67,6 +67,10 @@ CREATE TABLE Device (
     CONSTRAINT FK_Device_User
         FOREIGN KEY (AssignedUserId) REFERENCES [User](UserId)
 );
+
+ALTER TABLE Device
+ADD Latitude DECIMAL(9,6) NULL,
+    Longitude DECIMAL(9,6) NULL;
 
 /* TOPOLOGY LINKS --------------------------------------------------------------------- */
 CREATE TABLE DeviceLink (

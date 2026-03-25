@@ -1,6 +1,7 @@
 using INMS.Application.DTOs;
 using INMS.Application.Interfaces;
 using INMS.Domain.Entities;
+using INMS.Domain.Enums;
 using INMS.Domain.Interfaces;
 using INMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,25 @@ namespace INMS.Application.Services
             _assignmentRepository = assignmentRepository;
         }
 
-        public async Task<IEnumerable<Device>> GetAllAsync() => await _deviceRepository.GetAllAsync();
+        public async Task<IEnumerable<Device>> GetAllAsync()
+        {
+            return await _deviceRepository.GetAllAsync();
+        }
+
+        public async Task<IEnumerable<DeviceMapDto>> GetDevicesForMapAsync()
+        {
+            return await _context.Devices
+                .Select(d => new DeviceMapDto(
+                    d.DeviceId,
+                    d.DeviceName,
+                    d.DeviceType.ToString(),
+                    d.Latitude,
+                    d.Longitude,
+                    d.Status.ToString(),
+                    _context.ImpactedDevices.Any(id => id.DeviceId == d.DeviceId) ? 1 : 0
+                ))
+                .ToListAsync();
+        }
 
         public async Task<Device?> GetByIdAsync(int id) => await _deviceRepository.GetByIdAsync(id);
 
@@ -36,7 +55,9 @@ namespace INMS.Application.Services
                 IP = dto.IP ?? string.Empty,
                 PriorityLevel = dto.PriorityLevel,
                 LEAId = dto.LEAId,
-                Status = "UP"
+                Latitude = dto.Latitude,
+                Longitude = dto.Longitude,
+                Status = DeviceStatus.UP
             };
 
             _context.Devices.Add(device);
@@ -49,15 +70,152 @@ namespace INMS.Application.Services
             var existing = await _deviceRepository.GetByIdAsync(id);
             if (existing == null) return null;
 
+            var shouldPropagateImpact = string.Equals(dto.Status, "DOWN", StringComparison.OrdinalIgnoreCase);
+
             existing.DeviceName = dto.DeviceName;
             existing.DeviceType = dto.DeviceType;
             existing.IP = dto.IP ?? string.Empty;
-            existing.Status = dto.Status;
+            existing.Status = Enum.TryParse<DeviceStatus>(dto.Status, true, out var parsedStatus) ? parsedStatus : existing.Status;
             existing.PriorityLevel = dto.PriorityLevel;
             existing.LEAId = dto.LEAId;
+            existing.Latitude = dto.Latitude;
+            existing.Longitude = dto.Longitude;
 
             await _deviceRepository.UpdateAsync(existing);
+
+            if (shouldPropagateImpact)
+            {
+                await PropagateImpact(id);
+            }
+
             return existing;
+        }
+
+        public async Task PropagateImpact(int rootDeviceId)
+        {
+            var allLinks = await _context.DeviceLinks
+                .AsNoTracking()
+                .ToListAsync();
+
+            var impactedDeviceIds = GetDownstreamDeviceIds(rootDeviceId, allLinks);
+            var rootCauseId = await EnsureRootCauseAsync(rootDeviceId);
+
+            // Rebuild the impacted rows for this root device to keep records current.
+            var existingRows = await _context.ImpactedDevices
+                .Where(x => x.RootCauseId == rootCauseId)
+                .ToListAsync();
+
+            if (existingRows.Count > 0)
+            {
+                _context.ImpactedDevices.RemoveRange(existingRows);
+            }
+
+            if (impactedDeviceIds.Count == 0)
+            {
+                await _context.SaveChangesAsync();
+                return;
+            }
+
+            var impactedRows = impactedDeviceIds
+                .Select(deviceId => new ImpactedDevice
+                {
+                    RootCauseId = rootCauseId,
+                    DeviceId = deviceId,
+                    ImpactType = "DOWNSTREAM"
+                })
+                .ToList();
+
+            await _context.ImpactedDevices.AddRangeAsync(impactedRows);
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task<int> EnsureRootCauseAsync(int rootDeviceId)
+        {
+            var activeAlarm = await _context.Alarms
+                .Where(a => a.DeviceId == rootDeviceId && a.IsActive && a.AlarmType == "NODE_DOWN")
+                .OrderByDescending(a => a.RaisedTime)
+                .FirstOrDefaultAsync();
+
+            if (activeAlarm == null)
+            {
+                activeAlarm = new Alarm
+                {
+                    DeviceId = rootDeviceId,
+                    AlarmType = "NODE_DOWN",
+                    RaisedTime = DateTime.UtcNow,
+                    IsActive = true
+                };
+
+                await _context.Alarms.AddAsync(activeAlarm);
+                await _context.SaveChangesAsync();
+            }
+
+            var rootCause = await _context.RootCauses
+                .Where(rc => rc.AlarmId == activeAlarm.AlarmId)
+                .OrderByDescending(rc => rc.DetectedTime)
+                .FirstOrDefaultAsync();
+
+            if (rootCause == null)
+            {
+                rootCause = new RootCause
+                {
+                    AlarmId = activeAlarm.AlarmId,
+                    RootCauseDeviceId = rootDeviceId,
+                    RootCauseType = "NODE_FAILURE",
+                    DetectedTime = DateTime.UtcNow
+                };
+
+                await _context.RootCauses.AddAsync(rootCause);
+                await _context.SaveChangesAsync();
+            }
+
+            return rootCause.RootCauseId;
+        }
+
+        private static HashSet<int> GetDownstreamDeviceIds(
+            int rootDeviceId,
+            IEnumerable<DeviceLink> links)
+        {
+            var adjacency = new Dictionary<int, List<int>>();
+
+            foreach (var link in links)
+            {
+                if (!adjacency.TryGetValue(link.ParentDeviceId, out var children))
+                {
+                    children = new List<int>();
+                    adjacency[link.ParentDeviceId] = children;
+                }
+
+                children.Add(link.ChildDeviceId);
+            }
+
+            var visited = new HashSet<int> { rootDeviceId };
+            var impacted = new HashSet<int>();
+            var queue = new Queue<int>();
+            queue.Enqueue(rootDeviceId);
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+
+                if (!adjacency.TryGetValue(current, out var children))
+                {
+                    continue;
+                }
+
+                foreach (var childId in children)
+                {
+                    if (!visited.Add(childId))
+                    {
+                        continue;
+                    }
+
+                    impacted.Add(childId);
+                    queue.Enqueue(childId);
+                }
+            }
+
+            return impacted;
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -72,11 +230,11 @@ namespace INMS.Application.Services
 
         public async Task AssignDeviceAsync(int deviceId, int userId)
         {
-            var device = await _deviceRepository.GetByIdAsync(deviceId)
-                ?? throw new Exception("Device not found");
+            var device = await _deviceRepository.GetByIdAsync(deviceId);
+            if (device == null) throw new Exception("Device not found");
 
-            var user = await _context.Users.FindAsync(userId)
-                ?? throw new Exception("User not found");
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) throw new Exception("User not found");
 
             device.AssignedUserId = userId;
             await _deviceRepository.UpdateAsync(device);
@@ -84,16 +242,10 @@ namespace INMS.Application.Services
 
         public async Task<List<Device>> GetVisibleDevicesAsync(int userId)
         {
-            var user = await _context.Users
-                .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.UserId == userId)
-                ?? throw new Exception("User not found.");
-
-            if (user.Role?.RoleName == "Admin")
-                return await _deviceRepository.GetAllAsync();
-
             var assignment = await _assignmentRepository.GetByUserId(userId);
-            if (assignment == null) return new List<Device>();
+
+            if (assignment == null)
+                return new List<Device>();
 
             return assignment.AreaType switch
             {
@@ -102,6 +254,15 @@ namespace INMS.Application.Services
                 "Region"   => await _deviceRepository.GetDevicesByRegionAsync(assignment.AreaId),
                 _          => new List<Device>()
             };
+        }
+        public async Task<Device?> UpdateStatusAsync(int id, DeviceStatus status)
+        {
+            var device = await _context.Devices.FindAsync(id);
+            if (device == null) return null;
+
+            device.Status = status;
+            await _context.SaveChangesAsync();
+            return device;
         }
     }
 }
