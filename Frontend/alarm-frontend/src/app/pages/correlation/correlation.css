@@ -1,0 +1,29 @@
+.card {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+  width: 600px;
+}
+
+.controls {
+  margin-bottom: 20px;
+}
+
+select {
+  padding: 6px;
+  margin-right: 10px;
+}
+
+button {
+  background: #2c3e50;
+  color: white;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.result p {
+  margin: 6px 0;
+}

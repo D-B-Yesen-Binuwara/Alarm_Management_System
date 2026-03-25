@@ -1,0 +1,53 @@
+.alarm-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  background: #2c3e50;
+  color: white;
+  padding: 10px;
+}
+
+td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* normal alarm */
+
+.MINOR {
+  background: #fff3cd;
+}
+
+.MAJOR {
+  background: #ffe5b4;
+}
+
+/* blinking critical alarm */
+
+.CRITICAL {
+  background: #ff4d4d;
+  color: white;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}

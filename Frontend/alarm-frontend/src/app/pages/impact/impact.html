@@ -1,0 +1,60 @@
+<h2>Impact Analysis</h2>
+
+<div class="card">
+
+  <div class="controls">
+
+    <label>Select Device:</label>
+
+    <select [(ngModel)]="deviceId">
+
+      <option *ngFor="let d of devices" [value]="d.id">
+        {{d.name}}
+      </option>
+
+    </select>
+
+    <button (click)="runImpact()">Run Impact Analysis</button>
+
+  </div>
+
+  <br>
+
+  <p><b>Failed Device:</b> {{failedDevice}}</p>
+  <p><b>Total Impacted Devices:</b> {{impactCount}}</p>
+
+  <h3>Impacted Devices Table</h3>
+
+  <table>
+
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Device Name</th>
+        <th>Type</th>
+        <th>IP</th>
+        <th>Priority</th>
+        <th>LEA</th>
+        <th>Assigned User</th>
+      </tr>
+    </thead>
+
+    <tbody>
+
+      <tr *ngFor="let device of impactedDevices">
+
+        <td>{{device.deviceId}}</td>
+        <td>{{device.deviceName}}</td>
+        <td>{{device.deviceType}}</td>
+        <td>{{device.ip}}</td>
+        <td>{{device.priorityLevel}}</td>
+        <td>{{device.leaId}}</td>
+        <td>{{device.assignedUserId}}</td>
+
+      </tr>
+
+    </tbody>
+
+  </table>
+
+</div>

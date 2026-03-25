@@ -1,0 +1,32 @@
+<h2>Alarm Monitoring</h2>
+
+<div class="alarm-container">
+
+  <table>
+
+    <thead>
+
+      <tr>
+        <th>Device</th>
+        <th>Status</th>
+        <th>Severity</th>
+      </tr>
+
+    </thead>
+
+    <tbody>
+
+      <tr *ngFor="let alarm of alarms"
+          [ngClass]="alarm.severity">
+
+        <td>{{alarm.deviceName}}</td>
+        <td>{{alarm.status}}</td>
+        <td>{{alarm.severity}}</td>
+
+      </tr>
+
+    </tbody>
+
+  </table>
+
+</div>

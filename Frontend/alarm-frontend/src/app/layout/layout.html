@@ -1,0 +1,45 @@
+<div class="app">
+
+  <header class="navbar">
+
+    <div class="logo">
+      📡 Integrated NMS
+    </div>
+
+    <div class="user">
+      Admin
+      <button class="logout">Logout</button>
+    </div>
+
+  </header>
+
+  <div class="main">
+
+    <aside class="sidebar">
+
+      <h3>Monitoring</h3>
+
+      <a routerLink="/dashboard">Dashboard</a>
+      <a routerLink="/alarm">Alarm Monitoring</a>
+
+      <h3>Analysis</h3>
+
+      <a routerLink="/correlation">Correlation</a>
+      <a routerLink="/impact">Impact Analysis</a>
+
+      <h3>Network</h3>
+
+      <a routerLink="/graph">Graph Building</a>
+      <a routerLink="/traversal">Traversal</a>
+
+    </aside>
+
+    <section class="content">
+
+      <router-outlet></router-outlet>
+
+    </section>
+
+  </div>
+
+</div>

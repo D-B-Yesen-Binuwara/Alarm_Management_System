@@ -1,0 +1,71 @@
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #f4f6fa;
+}
+
+/* ===== TOP BAR ===== */
+
+.topbar {
+  height: 70px;
+  background: #2f5597;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 25px;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+}
+
+  .logo-section img {
+    height: 40px;
+    margin-right: 10px;
+  }
+
+.logout-btn {
+  background: #ff4d4d;
+  border: none;
+  padding: 8px 18px;
+  color: white;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+
+/* ===== SIDEBAR ===== */
+
+.sidebar {
+  position: fixed;
+  top: 70px;
+  left: 0;
+  width: 240px;
+  height: 100%;
+  background: white;
+  box-shadow: 2px 0px 8px rgba(0,0,0,0.1);
+  padding-top: 20px;
+}
+
+  .sidebar a {
+    display: block;
+    padding: 14px 25px;
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+  }
+
+    .sidebar a:hover {
+      background: #e9efff;
+    }
+
+
+/* ===== MAIN CONTENT ===== */
+
+.main {
+  margin-left: 240px;
+  margin-top: 70px;
+  padding: 40px;
+}

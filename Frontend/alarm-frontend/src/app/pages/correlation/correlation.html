@@ -1,0 +1,33 @@
+<h2>Run Correlation</h2>
+
+<div class="card">
+
+  <div class="controls">
+
+    <select [(ngModel)]="deviceId">
+
+      <option *ngFor="let d of devices" [value]="d.id">
+        {{d.name}}
+      </option>
+
+    </select>
+
+    <button (click)="runCorrelation()">Run Correlation</button>
+
+  </div>
+
+  <div class="result">
+
+    <p><b>Alarm Device :</b> {{alarmDevice}}</p>
+
+    <p><b>Root Cause Device :</b> {{rootDevice}}</p>
+
+    <p><b>Correlation Path :</b> {{path}}</p>
+
+    <p><b>Device Status :</b> {{status}}</p>
+
+    <p><b>Alarm Severity :</b> {{severity}}</p>
+
+  </div>
+
+</div>
