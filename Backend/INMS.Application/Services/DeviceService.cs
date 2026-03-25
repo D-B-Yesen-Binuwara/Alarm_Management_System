@@ -1,3 +1,4 @@
+using INMS.Application.DTOs;
 using INMS.Application.Interfaces;
 using INMS.Domain.Entities;
 using INMS.Domain.Enums;
@@ -37,7 +38,7 @@ namespace INMS.Application.Services
                     d.DeviceType.ToString(),
                     d.Latitude,
                     d.Longitude,
-                    d.Status,
+                    d.Status.ToString(),
                     _context.ImpactedDevices.Any(id => id.DeviceId == d.DeviceId) ? 1 : 0
                 ))
                 .ToListAsync();
@@ -45,9 +46,9 @@ namespace INMS.Application.Services
 
         public async Task<Device?> GetByIdAsync(int id) => await _deviceRepository.GetByIdAsync(id);
 
-        public async Task<Device> CreateAsync(Device device)
+        public async Task<Device> CreateAsync(CreateDeviceDto dto)
         {
-            if (device.AssignedUserId.HasValue)
+            var device = new Device
             {
                 DeviceName = dto.DeviceName,
                 DeviceType = dto.DeviceType,
@@ -56,7 +57,7 @@ namespace INMS.Application.Services
                 LEAId = dto.LEAId,
                 Latitude = dto.Latitude,
                 Longitude = dto.Longitude,
-                Status = "UP"
+                Status = DeviceStatus.UP
             };
 
             _context.Devices.Add(device);
@@ -64,7 +65,7 @@ namespace INMS.Application.Services
             return device;
         }
 
-        public async Task<Device?> UpdateAsync(int id, Device device)
+        public async Task<Device?> UpdateAsync(int id, UpdateDeviceDto dto)
         {
             var existing = await _deviceRepository.GetByIdAsync(id);
             if (existing == null) return null;
@@ -74,7 +75,7 @@ namespace INMS.Application.Services
             existing.DeviceName = dto.DeviceName;
             existing.DeviceType = dto.DeviceType;
             existing.IP = dto.IP ?? string.Empty;
-            existing.Status = dto.Status;
+            existing.Status = Enum.TryParse<DeviceStatus>(dto.Status, true, out var parsedStatus) ? parsedStatus : existing.Status;
             existing.PriorityLevel = dto.PriorityLevel;
             existing.LEAId = dto.LEAId;
             existing.Latitude = dto.Latitude;

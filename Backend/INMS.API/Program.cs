@@ -6,6 +6,17 @@ using INMS.Application.Services;
 using INMS.Application.Interfaces;
 using INMS.API.BackgroundServices;
 
+// Load .env file into environment variables
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+if (File.Exists(envPath))
+    foreach (var line in File.ReadAllLines(envPath)
+        .Where(l => !string.IsNullOrWhiteSpace(l) && !l.StartsWith('#') && l.Contains('=')))
+    {
+        var parts = line.Split('=', 2);
+        var key = parts[0].Trim().Replace(":", "__");
+        Environment.SetEnvironmentVariable(key, parts[1].Trim());
+    }
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
