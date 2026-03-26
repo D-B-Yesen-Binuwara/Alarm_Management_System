@@ -1,9 +1,10 @@
 // pages/ImpactAnalysis.jsx
+import { useState } from "react";
 import SummaryCard from "../components/SummaryCard";
+import NodeFilterBar from "../components/NodeFilterBar";
 import {
   getStatusBadgeClass,
   getTypeBadgeClass,
-  getDeviceTypeLabel,
   normalizeStatus
 } from "../utils/formatters";
 
@@ -32,7 +33,20 @@ const MOCK_NODES = [
   },
 ];
 
+const DEFAULT_FILTERS = { search: "", region: "", type: "", status: "" };
+
 export default function ImpactAnalysis() {
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+
+  const filtered = MOCK_NODES.filter((n) => {
+    const term = filters.search.toLowerCase();
+    if (term && !n.name.toLowerCase().includes(term) && !n.ip.includes(term)) return false;
+    if (filters.region && n.region !== filters.region) return false;
+    if (filters.type && n.type !== filters.type) return false;
+    if (filters.status && normalizeStatus(n.status) !== filters.status) return false;
+    return true;
+  });
+
   const affectedCount = MOCK_NODES.length;
 
   return (
@@ -86,6 +100,8 @@ export default function ImpactAnalysis() {
           Affected Nodes ({affectedCount})
         </h2>
 
+        <NodeFilterBar filters={filters} onChange={setFilters} nodes={MOCK_NODES} />
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead>
@@ -102,14 +118,14 @@ export default function ImpactAnalysis() {
               </tr>
             </thead>
             <tbody>
-              {MOCK_NODES.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center text-gray-400 py-10 text-sm">
                     No affected nodes found.
                   </td>
                 </tr>
               ) : (
-                MOCK_NODES.map((node) => (
+                filtered.map((node) => (
                   <tr key={node.name} className="border-b border-gray-100 hover:bg-gray-50 transition">
                     <td className="py-2.5 px-3 font-medium text-gray-800">{node.name}</td>
                     <td className="py-2.5 px-3 text-gray-600 font-mono text-xs">{node.ip}</td>
