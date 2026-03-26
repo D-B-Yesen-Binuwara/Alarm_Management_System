@@ -325,5 +325,22 @@ namespace INMS.Application.Services
             await _context.SaveChangesAsync();
             return device;
         }
+
+        public async Task<Device?> SetSimulationStateAsync(int id, bool isSimulatedDown)
+        {
+            var device = await _context.Devices.FindAsync(id);
+            if (device == null) return null;
+
+            device.IsSimulatedDown = isSimulatedDown;
+            device.Status = isSimulatedDown ? DeviceStatus.DOWN : DeviceStatus.UP;
+
+            if (isSimulatedDown)
+            {
+                await PropagateImpact(id);
+            }
+
+            await _context.SaveChangesAsync();
+            return device;
+        }
     }
 }
