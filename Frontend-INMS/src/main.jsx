@@ -6,5 +6,12 @@ import App from './App.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
+import { AppStoreProvider } from './store/index.jsx'
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <AppStoreProvider>
+      <App />
+    </AppStoreProvider>
   </StrictMode>,
 )

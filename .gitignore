@@ -1,3 +1,36 @@
+<<<<<<< HEAD
+# Ignore node_modules folder
+node_modules/
+
+# Ignore build output
+dist/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore environment variables
+.env
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build folders
+bin/
+obj/
+
+# Logs
+*.log
+
+
+ALARM_CRUD_CHANGES.txt
+AUTOMATED_HEARTBEAT_MONITORING_SYSTEM.txt
+Understand.txt
+HEARTBEAT_MONITORING_SYSTEM_CORRECTIONS.txt
+DEVICE_TOPOLOGY_IMPLEMENTATION.txt
+=======
 # =========================
 # NODE / REACT
 # =========================
@@ -62,3 +95,4 @@ Thumbs.db
 # MISC
 # =========================
 coverage/
+>>>>>>> thulasi/login-register

@@ -182,3 +182,4 @@
     border-right-color: var(--border);
   }
 }
+/* Intentionally minimal: page styling is handled with Tailwind utility classes. */
