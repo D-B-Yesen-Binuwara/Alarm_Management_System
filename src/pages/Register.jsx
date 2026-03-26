@@ -1,50 +1,31 @@
-import React, { useState } from "react";
-import "./Auth.css";
+import { useState } from "react";
+import AdminRegister from "./RegisterForms/AdminRegister";
+import RegionRegister from "./RegisterForms/RegionRegister";
+import ProvinceRegister from "./RegisterForms/ProvinceRegister";
+import LeaRegister from "./RegisterForms/LeaRegister";
 
-function Register() {
-    const [serviceNumber, setServiceNumber] = useState("");
-    const [password, setPassword] = useState("");
-    const [role, setRole] = useState("user");
+function Register({ setPage }) {
+  const [role, setRole] = useState("");
 
-    const handleRegister = () => {
-        console.log(serviceNumber, password, role);
-    };
+  if (role === "admin") return <AdminRegister setPage={setPage} />;
+  if (role === "region") return <RegionRegister setPage={setPage} />;
+  if (role === "province") return <ProvinceRegister setPage={setPage} />;
+  if (role === "lea") return <LeaRegister setPage={setPage} />;
 
-    return (
-        <div className="container">
-            <div className="header">Alarm Management System</div>
+  return (
+    <div className="auth-container">
+      <h2>Select Role</h2>
 
-            <div className="card">
-                <h2>User Registration</h2>
+      <button onClick={() => setRole("admin")}>Admin</button>
+      <button onClick={() => setRole("region")}>Region Officer</button>
+      <button onClick={() => setRole("province")}>Province Officer</button>
+      <button onClick={() => setRole("lea")}>LEA Officer</button>
 
-                <input
-                    className="input"
-                    type="text"
-                    placeholder="Service Number"
-                    onChange={(e) => setServiceNumber(e.target.value)}
-                />
+      <br /><br />
 
-                <input
-                    className="input"
-                    type="password"
-                    placeholder="Password"
-                    onChange={(e) => setPassword(e.target.value)}
-                />
-
-                <select
-                    className="input"
-                    onChange={(e) => setRole(e.target.value)}
-                >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                </select>
-
-                <button className="button" onClick={handleRegister}>
-                    Register
-                </button>
-            </div>
-        </div>
-    );
+      <button onClick={() => setPage("login")}>Back</button>
+    </div>
+  );
 }
 
 export default Register;

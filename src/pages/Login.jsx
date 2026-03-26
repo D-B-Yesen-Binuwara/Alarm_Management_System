@@ -1,41 +1,56 @@
-import React, { useState } from "react";
-import "./Auth.css";
+import { useState } from "react";
+import "../pages/Auth.css";
+import logo from "../assets/slt-logo.png";
 
-function Login() {
-    const [serviceNumber, setServiceNumber] = useState("");
-    const [password, setPassword] = useState("");
+function Login({ setPage }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-    const handleLogin = () => {
-        console.log(serviceNumber, password);
-    };
+  const handleLogin = (e) => {
+    e.preventDefault();
 
-    return (
-        <div className="container">
-            <div className="header">Alarm Management System</div>
+    const user = JSON.parse(localStorage.getItem("user"));
 
-            <div className="card">
-                <h2>Login</h2>
+    if (user && user.email === email && user.password === password) {
+      alert("Login success ✅");
+      setPage("dashboard");
+    } else {
+      alert("Invalid login ❌");
+    }
+  };
 
-                <input
-                    className="input"
-                    type="text"
-                    placeholder="Service Number"
-                    onChange={(e) => setServiceNumber(e.target.value)}
-                />
+  return (
+    <div className="auth-container">
+      <img src={logo} alt="SLT Logo" className="logo" />
 
-                <input
-                    className="input"
-                    type="password"
-                    placeholder="Password"
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+      <h2>Login</h2>
 
-                <button className="button" onClick={handleLogin}>
-                    Login
-                </button>
-            </div>
-        </div>
-    );
+      <form onSubmit={handleLogin}>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+
+        <button className="btn-primary">Login</button>
+      </form>
+
+      <p>
+        Don’t have an account?{" "}
+        <button onClick={() => setPage("register")}>Register</button>
+      </p>
+    </div>
+  );
 }
 
 export default Login;
