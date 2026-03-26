@@ -15,5 +15,6 @@ namespace INMS.Application.Interfaces
         Task AssignDeviceAsync(int deviceId, int userId);
         Task<List<Device>> GetVisibleDevicesAsync(int userId);
         Task<Device?> UpdateStatusAsync(int id, DeviceStatus status);
+        Task<Device?> SetSimulationStateAsync(int id, bool isSimulatedDown);
     }
 }

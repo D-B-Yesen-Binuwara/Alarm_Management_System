@@ -1,6 +1,5 @@
 using INMS.Application.Interfaces;
 using INMS.Domain.Enums;
-using INMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace INMS.API.BackgroundServices;
@@ -48,16 +47,12 @@ public class HeartbeatFailureDetectionService : BackgroundService
         var simulationEventService = scope.ServiceProvider.GetRequiredService<ISimulationEventService>();
         var currentTime = DateTime.UtcNow;
 
-        // Load all devices
         var devices = await context.Devices.ToListAsync();
 
-        // Load all DeviceLinks with parent devices for multi-parent topology
         var deviceLinks = await context.DeviceLinks
-            .Include(dl => dl.ParentDevice)
-            .Include(dl => dl.ChildDevice)
+            .AsNoTracking()
             .ToListAsync();
 
-        // OPTIMIZATION: Load latest heartbeats in single query to avoid N+1
         var deviceIds = devices.Select(d => d.DeviceId).ToList();
         var latestHeartbeats = await context.Heartbeats
             .Where(h => deviceIds.Contains(h.DeviceId))
@@ -65,92 +60,107 @@ public class HeartbeatFailureDetectionService : BackgroundService
             .Select(g => g.OrderByDescending(h => h.Timestamp).First())
             .ToDictionaryAsync(h => h.DeviceId);
 
-        // Group device links by child device for efficient lookup
-        var parentLinksByChild = deviceLinks
+        var parentIdsByChild = deviceLinks
             .GroupBy(dl => dl.ChildDeviceId)
-            .ToDictionary(g => g.Key, g => g.ToList());
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ParentDeviceId).Distinct().ToList());
+
+        var baseStatusByDevice = new Dictionary<int, DeviceStatus>(devices.Count);
+        foreach (var device in devices)
+        {
+            if (device.IsSimulatedDown)
+            {
+                baseStatusByDevice[device.DeviceId] = DeviceStatus.DOWN;
+                continue;
+            }
+
+            latestHeartbeats.TryGetValue(device.DeviceId, out var lastHeartbeat);
+
+            if (lastHeartbeat == null)
+            {
+                baseStatusByDevice[device.DeviceId] = DeviceStatus.DOWN;
+                continue;
+            }
+
+            var timeSinceLast = (currentTime - lastHeartbeat.Timestamp).TotalSeconds;
+            baseStatusByDevice[device.DeviceId] = timeSinceLast > FailureTimeoutSeconds
+                ? DeviceStatus.DOWN
+                : DeviceStatus.UP;
+        }
+
+        var computedStatusByDevice = new Dictionary<int, DeviceStatus>(baseStatusByDevice);
+        bool hasChanges;
+
+        do
+        {
+            hasChanges = false;
+
+            foreach (var device in devices)
+            {
+                var currentStatus = computedStatusByDevice[device.DeviceId];
+                if (currentStatus == DeviceStatus.DOWN)
+                {
+                    continue;
+                }
+
+                if (!parentIdsByChild.TryGetValue(device.DeviceId, out var parentIds) || parentIds.Count == 0)
+                {
+                    var desiredRootStatus = baseStatusByDevice[device.DeviceId];
+                    if (currentStatus != desiredRootStatus)
+                    {
+                        computedStatusByDevice[device.DeviceId] = desiredRootStatus;
+                        hasChanges = true;
+                    }
+                    continue;
+                }
+
+                bool allParentsUnavailable = parentIds.All(parentId =>
+                    computedStatusByDevice.TryGetValue(parentId, out var parentStatus) &&
+                    (parentStatus == DeviceStatus.DOWN || parentStatus == DeviceStatus.UNREACHABLE));
+
+                var desiredStatus = allParentsUnavailable
+                    ? DeviceStatus.UNREACHABLE
+                    : DeviceStatus.UP;
+
+                if (currentStatus != desiredStatus)
+                {
+                    computedStatusByDevice[device.DeviceId] = desiredStatus;
+                    hasChanges = true;
+                }
+            }
+        } while (hasChanges);
 
         foreach (var device in devices)
         {
-            DeviceStatus newStatus = DeviceStatus.UP;
-            bool isTopologyBasedChange = false;
+            var oldStatus = device.Status;
+            var resolvedStatus = computedStatusByDevice[device.DeviceId];
 
-            // MULTI-PARENT TOPOLOGY: Check all parent devices via DeviceLink
-            if (parentLinksByChild.TryGetValue(device.DeviceId, out var parentLinks) && parentLinks.Any())
+            if (oldStatus == resolvedStatus)
             {
-                // Check if ALL parents are DOWN or UNREACHABLE
-                bool allParentsDown = parentLinks.All(link =>
-                    link.ParentDevice != null &&
-                    (link.ParentDevice.Status == DeviceStatus.DOWN ||
-                     link.ParentDevice.Status == DeviceStatus.UNREACHABLE));
-
-                if (allParentsDown)
-                {
-                    newStatus = DeviceStatus.UNREACHABLE;
-                    isTopologyBasedChange = true;
-                    _logger.LogInformation($"Device {device.DeviceId} marked UNREACHABLE (all {parentLinks.Count} parents are DOWN/UNREACHABLE)");
-                }
-                else
-                {
-                    // At least one parent is UP, proceed to heartbeat check
-                    latestHeartbeats.TryGetValue(device.DeviceId, out var lastHeartbeat);
-
-                    if (lastHeartbeat != null)
-                    {
-                        var timeSinceLast = (currentTime - lastHeartbeat.Timestamp).TotalSeconds;
-
-                        if (timeSinceLast > FailureTimeoutSeconds)
-                        {
-                            newStatus = DeviceStatus.DOWN;
-                        }
-                        else
-                        {
-                            newStatus = DeviceStatus.UP;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // No parents (root device), check heartbeat directly
-                latestHeartbeats.TryGetValue(device.DeviceId, out var lastHeartbeat);
-
-                if (lastHeartbeat != null)
-                {
-                    var timeSinceLast = (currentTime - lastHeartbeat.Timestamp).TotalSeconds;
-
-                    if (timeSinceLast > FailureTimeoutSeconds)
-                    {
-                        newStatus = DeviceStatus.DOWN;
-                    }
-                    else
-                    {
-                        newStatus = DeviceStatus.UP;
-                    }
-                }
+                continue;
             }
 
-            // Update status only if changed
-            if (device.Status != newStatus)
-            {
-                var oldStatus = device.Status;
-                device.Status = newStatus;
+            device.Status = resolvedStatus;
 
-                // CORRECTED: Only log heartbeat events for real heartbeat failures/recoveries
-                // Not for topology-based UNREACHABLE changes
-                if (!isTopologyBasedChange)
-                {
-                    if (newStatus == DeviceStatus.DOWN && oldStatus != DeviceStatus.DOWN)
-                    {
-                        await simulationEventService.LogEventAsync(device.DeviceId, "HEARTBEAT_TIMEOUT");
-                        _logger.LogWarning($"Device {device.DeviceId} marked OFFLINE due to heartbeat timeout");
-                    }
-                    else if (newStatus == DeviceStatus.UP && oldStatus == DeviceStatus.DOWN)
-                    {
-                        await simulationEventService.LogEventAsync(device.DeviceId, "HEARTBEAT_RECOVERED");
-                        _logger.LogInformation($"Device {device.DeviceId} recovered and marked ONLINE");
-                    }
-                }
+            if (device.IsSimulatedDown && resolvedStatus == DeviceStatus.DOWN && oldStatus != DeviceStatus.DOWN)
+            {
+                await simulationEventService.LogEventAsync(device.DeviceId, "SIMULATED_DOWN");
+                _logger.LogWarning($"Device {device.DeviceId} forced DOWN because IsSimulatedDown=true");
+                continue;
+            }
+
+            if (resolvedStatus == DeviceStatus.DOWN && oldStatus != DeviceStatus.DOWN)
+            {
+                await simulationEventService.LogEventAsync(device.DeviceId, "HEARTBEAT_TIMEOUT");
+                _logger.LogWarning($"Device {device.DeviceId} marked OFFLINE due to heartbeat timeout");
+            }
+            else if (resolvedStatus == DeviceStatus.UP && oldStatus != DeviceStatus.UP)
+            {
+                await simulationEventService.LogEventAsync(device.DeviceId, "HEARTBEAT_RECOVERED");
+                _logger.LogInformation($"Device {device.DeviceId} recovered and marked ONLINE");
+            }
+            else if (resolvedStatus == DeviceStatus.UNREACHABLE)
+            {
+                _logger.LogInformation($"Device {device.DeviceId} marked UNREACHABLE due to upstream dependency");
             }
         }
 

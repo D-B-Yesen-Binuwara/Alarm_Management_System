@@ -74,28 +74,18 @@ namespace INMS.API.Controllers
         [HttpPost("{id}/simulate-failure")]
         public async Task<IActionResult> SimulateFailure(int id)
         {
-            var device = await _deviceService.GetByIdAsync(id);
-            if (device == null) return NotFound();
+            var updated = await _deviceService.SetSimulationStateAsync(id, true);
+            if (updated == null) return NotFound();
 
-            var dto = new UpdateDeviceDto(
-                device.DeviceName, device.DeviceType, device.IP,
-                "DOWN", device.PriorityLevel, device.LEAId,
-                device.Latitude, device.Longitude);
-            await _deviceService.UpdateAsync(id, dto);
             return Ok(new { message = "Device failure simulation started", deviceId = id });
         }
 
         [HttpPost("{id}/recover")]
         public async Task<IActionResult> Recover(int id)
         {
-            var device = await _deviceService.GetByIdAsync(id);
-            if (device == null) return NotFound();
+            var updated = await _deviceService.SetSimulationStateAsync(id, false);
+            if (updated == null) return NotFound();
 
-            var dto = new UpdateDeviceDto(
-                device.DeviceName, device.DeviceType, device.IP,
-                "UP", device.PriorityLevel, device.LEAId,
-                device.Latitude, device.Longitude);
-            await _deviceService.UpdateAsync(id, dto);
             return Ok(new { message = "Device recovery simulation started", deviceId = id });
         }
 
