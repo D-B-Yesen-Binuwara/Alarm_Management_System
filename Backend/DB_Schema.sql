@@ -237,3 +237,83 @@ SELECT * FROM Province;
 SELECT * FROM LEA;
 SELECT * FROM Device;
 SELECT * FROM DeviceLink;
+
+ALTER TABLE Device
+ADD Latitude DECIMAL(9,6) NULL,
+    Longitude DECIMAL(9,6) NULL;
+
+
+-- SLBN - Colombo
+UPDATE Device SET Latitude = 6.9271, Longitude = 79.8612 WHERE DeviceId = 1;
+
+-- SLBN - Gampaha
+UPDATE Device SET Latitude = 7.0917, Longitude = 79.9992 WHERE DeviceId = 2;
+
+-- CEAN - Colombo Central (slight offset)
+UPDATE Device SET Latitude = 6.9300, Longitude = 79.8650 WHERE DeviceId = 3;
+
+-- CEAN - Colombo North
+UPDATE Device SET Latitude = 6.9500, Longitude = 79.8700 WHERE DeviceId = 4;
+
+-- CEAN - Gampaha
+UPDATE Device SET Latitude = 7.0950, Longitude = 80.0020 WHERE DeviceId = 5;
+
+-- MSAN - Colombo A1 
+UPDATE Device SET Latitude = 6.9285, Longitude = 79.8625 WHERE DeviceId = 6;
+
+-- MSAN - Colombo A2
+UPDATE Device SET Latitude = 6.9260, Longitude = 79.8595 WHERE DeviceId = 7;
+
+-- MSAN - Gampaha A1
+UPDATE Device SET Latitude = 7.0925, Longitude = 79.9975 WHERE DeviceId = 8;
+
+
+
+---- || TEST SCENARIO FOR MAP || ----
+
+-- 🔁 Reset
+DELETE FROM ImpactedDevice;
+DELETE FROM RootCause;
+DELETE FROM Alarm;
+
+UPDATE Device
+SET Status = 'UP';
+
+
+-- 🔴 Step 1: Root failure
+UPDATE Device
+SET Status = 'DOWN'
+WHERE DeviceName = 'SLBN-Colombo-01';
+
+
+-- 🚨 Step 2: Insert Alarm (FIXED)
+INSERT INTO Alarm (DeviceId, AlarmType)
+VALUES (
+    (SELECT DeviceId FROM Device WHERE DeviceName = 'SLBN-Colombo-01'),
+    'SIMULATION'
+);
+
+
+-- 🧠 Step 3: Insert RootCause (NOW AlarmId will exist)
+INSERT INTO RootCause (AlarmId, RootCauseDeviceId, RootCauseType, DetectedTime)
+VALUES (
+    (SELECT TOP 1 AlarmId FROM Alarm ORDER BY AlarmId DESC),
+    (SELECT DeviceId FROM Device WHERE DeviceName = 'SLBN-Colombo-01'),
+    'SIMULATION',
+    GETDATE()
+);
+
+
+-- 🟡 Step 4: Insert Impacted Devices
+INSERT INTO ImpactedDevice (DeviceId, RootCauseId, ImpactType)
+SELECT DeviceId,
+       (SELECT TOP 1 RootCauseId FROM RootCause ORDER BY RootCauseId DESC),
+       'DOWNSTREAM'  -- or 'IMPACTED'
+FROM Device
+WHERE DeviceName IN (
+    'CEAN-Colombo-Central-01',
+    'CEAN-Colombo-North-01',
+    'MSAN-Colombo-A1',
+    'MSAN-Colombo-A2'
+);
+
