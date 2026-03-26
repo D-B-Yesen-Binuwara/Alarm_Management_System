@@ -40,10 +40,11 @@ const NetworkMap = () => {
 
   const getMarkerIcon = (status, isImpacted) => {
     let iconUrl;
+    const normalized = normalizeStatus(status);
 
-    if (normalizeStatus(status) === 'DOWN') {
+    if (normalized === 'DOWN') {
       iconUrl = RED_MARKER_URL;
-    } else if (isImpacted === 1) {
+    } else if (normalized === 'UNREACHABLE') {
       iconUrl = YELLOW_MARKER_URL;
     } else {
       iconUrl = GREEN_MARKER_URL;

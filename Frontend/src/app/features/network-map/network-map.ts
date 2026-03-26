@@ -92,11 +92,13 @@ export class NetworkMapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private getMarkerIcon(status: string, isImpacted: boolean): L.Icon {
-    const iconUrl = isImpacted
-      ? this.yellowMarkerIconUrl
-      : this.normalizeStatus(status) === 'DOWN'
-        ? this.redMarkerIconUrl
+  private getMarkerIcon(status: string | number, isImpacted: boolean): L.Icon {
+    const normalized = this.normalizeStatus(status);
+
+    const iconUrl = normalized === 'DOWN'
+      ? this.redMarkerIconUrl
+      : (normalized === 'UNREACHABLE')
+        ? this.yellowMarkerIconUrl
         : this.greenMarkerIconUrl;
 
     return L.icon({
@@ -110,6 +112,20 @@ export class NetworkMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private normalizeStatus(status: string | number | null | undefined): string {
-    return String(status ?? '').toUpperCase();
+    const normalized = String(status ?? '').trim().toUpperCase();
+
+    if (normalized === '0' || normalized === 'UP') {
+      return 'UP';
+    }
+
+    if (normalized === '1' || normalized === 'DOWN') {
+      return 'DOWN';
+    }
+
+    if (normalized === '2' || normalized === 'UNREACHABLE') {
+      return 'UNREACHABLE';
+    }
+
+    return normalized;
   }
 }
