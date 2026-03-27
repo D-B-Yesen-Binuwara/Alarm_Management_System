@@ -76,6 +76,72 @@ const Dashboard = () => {
   const failedNodes = devices.filter(d => isDownStatus(d.status)).length;
   const activeAlarms = alarms.filter(a => a.isActive).length;
 
+  const summaryCards = [
+    {
+      key: 'total',
+      title: 'Total Nodes',
+      value: totalNodes,
+      caption: 'All monitored devices',
+      containerClass: 'border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50',
+      badgeClass: 'bg-sky-100 text-sky-700',
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M3.5 12h17" />
+          <path d="M12 3.5a13.5 13.5 0 0 1 0 17" />
+          <path d="M12 3.5a13.5 13.5 0 0 0 0 17" />
+        </svg>
+      )
+    },
+    {
+      key: 'active',
+      title: 'Active Nodes',
+      value: activeNodes,
+      caption: 'Nodes currently reachable',
+      containerClass: 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-lime-50',
+      badgeClass: 'bg-emerald-100 text-emerald-700',
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <path d="M12 4v4" />
+          <path d="M12 16v4" />
+          <path d="M4 12h4" />
+          <path d="M16 12h4" />
+          <circle cx="12" cy="12" r="5.5" />
+          <path d="m9.5 12 1.6 1.8 3.4-3.6" />
+        </svg>
+      )
+    },
+    {
+      key: 'down',
+      title: 'Down Nodes',
+      value: failedNodes,
+      caption: 'Nodes requiring action',
+      containerClass: 'border-rose-200 bg-gradient-to-br from-rose-50 to-orange-50',
+      badgeClass: 'bg-rose-100 text-rose-700',
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <path d="M12 3.5 2.8 19.5h18.4L12 3.5Z" />
+          <path d="M12 9v4.5" />
+          <path d="M12 17.2h.01" />
+        </svg>
+      )
+    },
+    {
+      key: 'alarms',
+      title: 'Active Alarms',
+      value: activeAlarms,
+      caption: 'Unresolved network alerts',
+      containerClass: 'border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50',
+      badgeClass: 'bg-amber-100 text-amber-700',
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <path d="M12 4a5 5 0 0 1 5 5v3.2l1.5 2.3a1 1 0 0 1-.84 1.55H6.34a1 1 0 0 1-.84-1.55L7 12.2V9a5 5 0 0 1 5-5Z" />
+          <path d="M10 18a2 2 0 0 0 4 0" />
+        </svg>
+      )
+    }
+  ];
+
   // Get recent alarms
   const recentAlarms = alarms
     .filter(a => a.isActive)
@@ -135,47 +201,30 @@ const Dashboard = () => {
       {!loading && (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {/* Total Nodes */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4 flex items-center gap-4">
-              <div className="text-3xl">🌐</div>
-              <div>
-                <div className="text-3xl font-bold text-gray-800">{totalNodes}</div>
-                <div className="text-sm text-gray-500">Total Nodes</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+            {summaryCards.map((card) => (
+              <div
+                key={card.key}
+                className={`relative overflow-hidden rounded-2xl border px-5 py-4 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md ${card.containerClass}`}
+              >
+                <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/60" aria-hidden="true" />
+                <div className="relative flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm md:text-base font-semibold uppercase tracking-wide text-gray-700">{card.title}</p>
+                    <p className="mt-2 text-3xl font-bold text-gray-900">{card.value}</p>
+                    <p className="mt-1 text-xs text-gray-600">{card.caption}</p>
+                  </div>
+                  <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${card.badgeClass}`}>
+                    {card.icon}
+                  </div>
+                </div>
               </div>
-            </div>
-
-            {/* Active Nodes */}
-            <div className="bg-white rounded-xl border border-green-300 shadow-sm px-5 py-4 flex items-center gap-4">
-              <div className="text-3xl text-green-500">✅</div>
-              <div>
-                <div className="text-3xl font-bold text-gray-800">{activeNodes}</div>
-                <div className="text-sm text-gray-500">Active Nodes</div>
-              </div>
-            </div>
-
-            {/* Down Nodes */}
-            <div className="bg-white rounded-xl border border-red-300 shadow-sm px-5 py-4 flex items-center gap-4">
-              <div className="text-3xl text-red-500">❌</div>
-              <div>
-                <div className="text-3xl font-bold text-gray-800">{failedNodes}</div>
-                <div className="text-sm text-gray-500">Down Nodes</div>
-              </div>
-            </div>
-
-            {/* Active Alarms */}
-            <div className="bg-white rounded-xl border border-yellow-300 shadow-sm px-5 py-4 flex items-center gap-4">
-              <div className="text-3xl">🔔</div>
-              <div>
-                <div className="text-3xl font-bold text-gray-800">{activeAlarms}</div>
-                <div className="text-sm text-gray-500">Active Alarms</div>
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Recent Alarms */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
-            <h2 className="text-base font-semibold text-gray-700 mb-3">Recent Alarms</h2>
+            <h2 className="text-lg md:text-xl font-semibold text-gray-700 mb-3">Recent Alarms</h2>
 
             {recentAlarms.length === 0 ? (
               <div className="text-sm text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">
@@ -208,7 +257,7 @@ const Dashboard = () => {
           {/* Network Nodes Table */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-gray-700">Network Nodes</h2>
+              <h2 className="text-lg md:text-xl font-semibold text-gray-700">Network Nodes</h2>
               <button
                 onClick={refresh}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded-lg transition font-medium"
@@ -262,6 +311,8 @@ const Dashboard = () => {
                         <th className="py-2 px-3 font-semibold">Name</th>
                         <th className="py-2 px-3 font-semibold">IP Address</th>
                         <th className="py-2 px-3 font-semibold">Type</th>
+                        <th className="py-2 px-3 font-semibold">Region</th>
+                        <th className="py-2 px-3 font-semibold">Province</th>
                         <th className="py-2 px-3 font-semibold">LEA ID</th>
                         <th className="py-2 px-3 font-semibold">Status</th>
                         <th className="py-2 px-3 font-semibold">Priority</th>
@@ -279,6 +330,8 @@ const Dashboard = () => {
                               {getDeviceTypeLabel(device.deviceType)}
                             </span>
                           </td>
+                          <td className="py-2.5 px-3 text-gray-500">{device.regionName ?? device.region ?? '-'}</td>
+                          <td className="py-2.5 px-3 text-gray-500">{device.provinceName ?? device.province ?? '-'}</td>
                           <td className="py-2.5 px-3 text-gray-500">{device.leaId}</td>
                           <td className="py-2.5 px-3">
                             <span className={`${getStatusBadgeClass(device.status)} text-xs font-bold px-2 py-0.5 rounded`}>
