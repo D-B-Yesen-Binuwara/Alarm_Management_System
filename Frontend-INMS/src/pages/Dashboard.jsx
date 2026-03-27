@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DeviceService from '../services/DeviceService';
 import AlarmService from '../services/AlarmService';
+import NodeFilterBar from '../components/NodeFilterBar';
 import {
   getDeviceTypeLabel,
   getPriorityLabel,
@@ -27,9 +28,12 @@ const Dashboard = () => {
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
 
   // Filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [filters, setFilters] = useState({
+    search: '',
+    region: '',
+    type: '',
+    status: ''
+  });
   const [isActiveAlarmsExpanded, setIsActiveAlarmsExpanded] = useState(false);
   const [isDownNodesExpanded, setIsDownNodesExpanded] = useState(false);
 
@@ -52,16 +56,6 @@ const Dashboard = () => {
       return next;
     });
   };
-
-  const availableDeviceTypes = useMemo(
-    () => [...new Set(devices.map(d => getDeviceTypeLabel(d.deviceType)).filter(Boolean))],
-    [devices]
-  );
-
-  const availableStatuses = useMemo(
-    () => [...new Set(devices.map(d => normalizeStatus(d.status)).filter(Boolean))],
-    [devices]
-  );
 
   useEffect(() => {
     load();
@@ -177,14 +171,16 @@ const Dashboard = () => {
 
   // Filter devices based on search and filters
   const filteredDevices = devices.filter(d => {
-    const term = searchTerm.toLowerCase();
+    const term = filters.search.toLowerCase();
     const matchesSearch =
       !term ||
       d.deviceName?.toLowerCase().includes(term) ||
       d.ip?.toLowerCase().includes(term);
-    const matchesType = !selectedType || getDeviceTypeLabel(d.deviceType) === selectedType;
-    const matchesStatus = !selectedStatus || normalizeStatus(d.status) === selectedStatus;
-    return matchesSearch && matchesType && matchesStatus;
+    const deviceRegion = (d.regionName ?? d.region ?? '').toLowerCase();
+    const matchesRegion = !filters.region || deviceRegion === filters.region.toLowerCase();
+    const matchesType = !filters.type || getDeviceTypeLabel(d.deviceType) === filters.type;
+    const matchesStatus = !filters.status || normalizeStatus(d.status) === filters.status;
+    return matchesSearch && matchesRegion && matchesType && matchesStatus;
   });
 
   // Helper functions
@@ -382,35 +378,7 @@ const Dashboard = () => {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-3 mb-4">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by name or IP..."
-                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm flex-1 min-w-48 focus:outline-none focus:ring-2 focus:ring-green-400"
-              />
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-              >
-                <option value="">All Types</option>
-                {availableDeviceTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-              >
-                <option value="">All Status</option>
-                {availableStatuses.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
+            <NodeFilterBar filters={filters} onChange={setFilters} />
 
             {/* Table */}
             {filteredDevices.length === 0 ? (
