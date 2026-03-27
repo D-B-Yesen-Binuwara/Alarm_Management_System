@@ -29,6 +29,42 @@ namespace INMS.Application.Services
             return await _deviceRepository.GetAllAsync();
         }
 
+        public async Task<IEnumerable<DeviceListDto>> GetAllForDashboardAsync()
+        {
+            var rows = await _context.Devices
+                .AsNoTracking()
+                .Join(_context.LEAs.AsNoTracking(),
+                    d => d.LEAId,
+                    l => l.LEAId,
+                    (d, l) => new { Device = d, Lea = l })
+                .Join(_context.Provinces.AsNoTracking(),
+                    dl => dl.Lea.ProvinceId,
+                    p => p.ProvinceId,
+                    (dl, p) => new { dl.Device, dl.Lea, Province = p })
+                .Join(_context.Regions.AsNoTracking(),
+                    dlp => dlp.Province.RegionId,
+                    r => r.RegionId,
+                    (dlp, r) => new DeviceListDto(
+                        dlp.Device.DeviceId,
+                        dlp.Device.DeviceName,
+                        dlp.Device.DeviceType,
+                        dlp.Device.IP,
+                        dlp.Device.Status,
+                        dlp.Device.PriorityLevel,
+                        dlp.Device.LEAId,
+                        dlp.Lea.Name,
+                        dlp.Province.Name,
+                        r.Name,
+                        dlp.Device.Latitude,
+                        dlp.Device.Longitude,
+                        dlp.Device.AssignedUserId,
+                        dlp.Device.IsSimulatedDown
+                    ))
+                .ToListAsync();
+
+            return rows;
+        }
+
         public async Task<IEnumerable<DeviceMapDto>> GetDevicesForMapAsync()
         {
             var devices = await _context.Devices

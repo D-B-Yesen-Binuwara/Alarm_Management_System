@@ -13,9 +13,23 @@ const NetworkMap = () => {
   const [error, setError] = useState(null);
 
   const MARKER_SHADOW_URL = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png';
-  const GREEN_MARKER_URL = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png';
-  const RED_MARKER_URL = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png';
-  const YELLOW_MARKER_URL = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png';
+  const STATUS_COLORS = {
+    UP: '#16a34a',
+    DOWN: '#dc2626',
+    UNREACHABLE: '#facc15'
+  };
+  const DEVICE_TYPE_LEGEND = [
+    { label: 'SLBN', value: 'SLBN' },
+    { label: 'CEAN', value: 'CEAN' },
+    { label: 'MSAN', value: 'MSAN' },
+    { label: 'Customer', value: 'Customer' }
+  ];
+
+  const STATUS_LEGEND = [
+    { label: 'UP', value: 'UP' },
+    { label: 'DOWN', value: 'DOWN' },
+    { label: 'UNREACHABLE', value: 'UNREACHABLE' }
+  ];
 
   const initializeMap = () => {
     if (mapInstance.current) {
@@ -38,25 +52,59 @@ const NetworkMap = () => {
     }, 0);
   };
 
-  const getMarkerIcon = (status, isImpacted) => {
-    let iconUrl;
+  const getStatusColor = (status) => {
     const normalized = normalizeStatus(status);
-
     if (normalized === 'DOWN') {
-      iconUrl = RED_MARKER_URL;
-    } else if (normalized === 'UNREACHABLE') {
-      iconUrl = YELLOW_MARKER_URL;
-    } else {
-      iconUrl = GREEN_MARKER_URL;
+      return STATUS_COLORS.DOWN;
+    }
+    if (normalized === 'UNREACHABLE') {
+      return STATUS_COLORS.UNREACHABLE;
+    }
+    return STATUS_COLORS.UP;
+  };
+
+  const getInnerShapeSvg = (deviceType) => {
+    const typeLabel = String(deviceType ?? '').trim().toUpperCase();
+
+    if (typeLabel === 'SLBN' || deviceType === 0) {
+      return '<circle cx="16" cy="14" r="4.1" fill="#111827" />';
     }
 
+    if (typeLabel === 'CEAN' || deviceType === 1) {
+      return '<rect x="11.7" y="9.7" width="8.6" height="8.6" rx="1" fill="#111827" />';
+    }
+
+    if (typeLabel === 'MSAN' || deviceType === 2) {
+      return '<polygon points="16,8.9 21.1,17.7 10.9,17.7" fill="#111827" />';
+    }
+
+    return '<polygon points="16,8.7 21.3,14 16,19.3 10.7,14" fill="#111827" />';
+  };
+
+  const getPegSvgDataUrl = (status, deviceType) => {
+    const pegColor = getStatusColor(status);
+    const innerShape = getInnerShapeSvg(deviceType);
+
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="46" viewBox="0 0 32 46">
+        <path d="M16 1.5C8.4 1.5 2.2 7.7 2.2 15.3c0 9.9 11.4 20.1 13.2 21.6.4.4 1 .4 1.4 0 1.8-1.5 13.2-11.7 13.2-21.6C29.8 7.7 23.6 1.5 16 1.5Z" fill="${pegColor}" stroke="#1f2937" stroke-width="1.2" />
+        <circle cx="16" cy="14" r="8.1" fill="#f8fafc" />
+        ${innerShape}
+      </svg>
+    `;
+
+    return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  };
+
+  const getMarkerIcon = (status, deviceType) => {
     return L.icon({
-      iconUrl,
+      iconUrl: getPegSvgDataUrl(status, deviceType),
       shadowUrl: MARKER_SHADOW_URL,
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41]
+      iconSize: [26, 40],
+      iconAnchor: [13, 40],
+      popupAnchor: [0, -34],
+      shadowSize: [41, 41],
+      shadowAnchor: [13, 40]
     });
   };
 
@@ -65,7 +113,7 @@ const NetworkMap = () => {
 
     for (const device of devices) {
       L.marker([device.latitude, device.longitude], {
-        icon: getMarkerIcon(device.status, device.isImpacted)
+        icon: getMarkerIcon(device.status, device.deviceType)
       })
         .bindPopup(
           `<strong>Device ID:</strong> ${device.deviceId}<br>
@@ -136,6 +184,40 @@ const NetworkMap = () => {
               style={{ height: '600px' }}
               className="w-full"
             ></div>
+
+            <div className="absolute top-4 right-4 z-[500] flex flex-col gap-3">
+              <div className="bg-white/95 backdrop-blur-sm border border-gray-300 rounded-lg shadow-md px-3 py-2">
+                <h4 className="text-xs font-bold text-gray-800 mb-2">Device Type</h4>
+                <div className="space-y-1.5">
+                  {DEVICE_TYPE_LEGEND.map((item) => (
+                    <div key={item.value} className="flex items-center gap-2">
+                      <img
+                        src={getPegSvgDataUrl('UP', item.value)}
+                        alt={item.label}
+                        className="w-[18px] h-[28px]"
+                      />
+                      <span className="text-xs text-gray-700">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white/95 backdrop-blur-sm border border-gray-300 rounded-lg shadow-md px-3 py-2">
+                <h4 className="text-xs font-bold text-gray-800 mb-2">Status Colour</h4>
+                <div className="space-y-1.5">
+                  {STATUS_LEGEND.map((item) => (
+                    <div key={item.value} className="flex items-center gap-2">
+                      <img
+                        src={getPegSvgDataUrl(item.value, 'SLBN')}
+                        alt={item.label}
+                        className="w-[18px] h-[28px]"
+                      />
+                      <span className="text-xs text-gray-700">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center text-gray-500 bg-white/75">

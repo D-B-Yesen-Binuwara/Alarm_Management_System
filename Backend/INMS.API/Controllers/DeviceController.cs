@@ -19,7 +19,7 @@ namespace INMS.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var devices = await _deviceService.GetAllAsync();
+            var devices = await _deviceService.GetAllForDashboardAsync();
             return Ok(devices);
         }
 
