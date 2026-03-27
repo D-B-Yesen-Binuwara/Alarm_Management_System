@@ -10,3 +10,15 @@ D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Domain\o
 D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\refint\INMS.Domain.dll
 D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\INMS.Domain.pdb
 D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\ref\INMS.Domain.dll
+E:\Alarm_Management_System\Backend\INMS.Domain\bin\Debug\net9.0\INMS.Domain.deps.json
+E:\Alarm_Management_System\Backend\INMS.Domain\bin\Debug\net9.0\INMS.Domain.dll
+E:\Alarm_Management_System\Backend\INMS.Domain\bin\Debug\net9.0\INMS.Domain.pdb
+E:\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\INMS.Domain.GeneratedMSBuildEditorConfig.editorconfig
+E:\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\INMS.Domain.AssemblyInfoInputs.cache
+E:\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\INMS.Domain.AssemblyInfo.cs
+E:\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\INMS.Domain.csproj.CoreCompileInputs.cache
+E:\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\INMS.Domain.sourcelink.json
+E:\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\INMS.Domain.dll
+E:\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\refint\INMS.Domain.dll
+E:\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\INMS.Domain.pdb
+E:\Alarm_Management_System\Backend\INMS.Domain\obj\Debug\net9.0\ref\INMS.Domain.dll
