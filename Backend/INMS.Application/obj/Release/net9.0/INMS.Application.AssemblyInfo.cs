@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("INMS.Application")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+61a74bf7e6e621952fc2d7ebd1077eacbdc14ca9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+97643589ce9d8a96def376732a18b36bc041ed00")]
 [assembly: System.Reflection.AssemblyProductAttribute("INMS.Application")]
 [assembly: System.Reflection.AssemblyTitleAttribute("INMS.Application")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
