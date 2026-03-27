@@ -37,3 +37,20 @@ public record DeviceMapDto(
 	string Status,
 	int IsImpacted
 );
+
+public record DeviceListDto(
+	int DeviceId,
+	string DeviceName,
+	DeviceType DeviceType,
+	string IP,
+	DeviceStatus Status,
+	PriorityLevel PriorityLevel,
+	int LEAId,
+	string? LEAName,
+	string? ProvinceName,
+	string? RegionName,
+	decimal Latitude,
+	decimal Longitude,
+	int? AssignedUserId,
+	bool IsSimulatedDown
+);
