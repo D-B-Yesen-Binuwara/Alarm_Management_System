@@ -1,0 +1,230 @@
+{
+  "format": 1,
+  "restore": {
+    "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj": {}
+  },
+  "projects": {
+    "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj",
+        "projectName": "INMS.Application",
+        "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj",
+        "packagesPath": "C:\\Users\\yesen\\.nuget\\packages\\",
+        "outputPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Application\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\yesen\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
+                "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj"
+              },
+              "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj": {
+                "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj",
+        "projectName": "INMS.Domain",
+        "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj",
+        "packagesPath": "C:\\Users\\yesen\\.nuget\\packages\\",
+        "outputPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\yesen\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj",
+        "projectName": "INMS.Infrastructure",
+        "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\yesen\\.nuget\\packages\\",
+        "outputPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\yesen\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
+                "projectPath": "D:\\Yesen\\Learning\\Projects\\ASP.NET\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.SqlServer": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

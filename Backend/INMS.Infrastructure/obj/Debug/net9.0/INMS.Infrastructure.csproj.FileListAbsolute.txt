@@ -1,0 +1,16 @@
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\bin\Debug\net9.0\INMS.Infrastructure.deps.json
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\bin\Debug\net9.0\INMS.Infrastructure.dll
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\bin\Debug\net9.0\INMS.Infrastructure.pdb
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\bin\Debug\net9.0\INMS.Domain.dll
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\bin\Debug\net9.0\INMS.Domain.pdb
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\INMS.Infrastructure.csproj.AssemblyReference.cache
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\INMS.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\INMS.Infrastructure.AssemblyInfoInputs.cache
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\INMS.Infrastructure.AssemblyInfo.cs
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\INMS.Infrastructure.csproj.CoreCompileInputs.cache
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\INMS.Infrastructure.sourcelink.json
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\INMS.Inf.F1514153.Up2Date
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\INMS.Infrastructure.dll
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\refint\INMS.Infrastructure.dll
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\INMS.Infrastructure.pdb
+D:\Yesen\Learning\Projects\ASP.NET\Alarm_Management_System\Backend\INMS.Infrastructure\obj\Debug\net9.0\ref\INMS.Infrastructure.dll
