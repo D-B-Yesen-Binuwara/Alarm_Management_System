@@ -30,6 +30,28 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [isActiveAlarmsExpanded, setIsActiveAlarmsExpanded] = useState(false);
+  const [isDownNodesExpanded, setIsDownNodesExpanded] = useState(false);
+
+  const toggleActiveAlarms = () => {
+    setIsActiveAlarmsExpanded((prev) => {
+      const next = !prev;
+      if (next) {
+        setIsDownNodesExpanded(false);
+      }
+      return next;
+    });
+  };
+
+  const toggleDownNodes = () => {
+    setIsDownNodesExpanded((prev) => {
+      const next = !prev;
+      if (next) {
+        setIsActiveAlarmsExpanded(false);
+      }
+      return next;
+    });
+  };
 
   const availableDeviceTypes = useMemo(
     () => [...new Set(devices.map(d => getDeviceTypeLabel(d.deviceType)).filter(Boolean))],
@@ -142,10 +164,15 @@ const Dashboard = () => {
     }
   ];
 
-  // Get recent alarms
+  // Get recent active alarms
   const recentAlarms = alarms
     .filter(a => a.isActive)
     .sort((a, b) => new Date(b.raisedTime).getTime() - new Date(a.raisedTime).getTime())
+    .slice(0, 5);
+
+  const downNodes = devices
+    .filter(d => isDownStatus(d.status))
+    .sort((a, b) => (a.deviceName ?? '').localeCompare(b.deviceName ?? ''))
     .slice(0, 5);
 
   // Filter devices based on search and filters
@@ -222,36 +249,124 @@ const Dashboard = () => {
             ))}
           </div>
 
-          {/* Recent Alarms */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
-            <h2 className="text-lg md:text-xl font-semibold text-gray-700 mb-3">Recent Alarms</h2>
-
-            {recentAlarms.length === 0 ? (
-              <div className="text-sm text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">
-                No active alarms at this time.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {recentAlarms.map((alarm) => (
-                  <div
-                    key={alarm.alarmId}
-                    className={`${getAlarmRowClass(alarm.alarmType)} rounded-lg px-4 py-3 flex justify-between items-start`}
+          <div className="grid grid-cols-1 xl:grid-cols-2 items-start gap-4 mb-6">
+            {/* Active Alarms */}
+            <div className="self-start bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <button
+                type="button"
+                onClick={toggleActiveAlarms}
+                className="w-full flex items-center justify-between gap-3 text-left"
+                aria-expanded={isActiveAlarmsExpanded}
+                aria-controls="active-alarms-content"
+              >
+                <h2 className="text-lg md:text-xl font-semibold text-gray-700">Active Alarms</h2>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 font-semibold">
+                    {activeAlarms} {activeAlarms === 1 ? 'alarm' : 'alarms'}
+                  </span>
+                  <svg
+                    className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isActiveAlarmsExpanded ? 'rotate-180' : ''}`}
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    aria-hidden="true"
                   >
-                    <div>
-                      <span className={`${getAlarmBadgeClass(alarm.alarmType)} text-xs font-semibold px-2 py-0.5 rounded mr-2`}>
-                        {alarm.alarmType}
-                      </span>
-                      <span className="text-sm text-gray-700">
-                        {alarm.alarmType} at {getDeviceNameForAlarm(alarm.deviceId)}
-                      </span>
+                    <path d="M4.5 7 10 13l5.5-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </button>
+
+              {isActiveAlarmsExpanded && (
+                <div id="active-alarms-content" className="mt-4">
+                  {recentAlarms.length === 0 ? (
+                    <div className="text-sm text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">
+                      No current alarms.
                     </div>
-                    <span className="text-xs text-gray-400 whitespace-nowrap ml-4">
-                      {formatDate(alarm.raisedTime)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ) : (
+                    <div className="space-y-2">
+                      {recentAlarms.map((alarm) => (
+                        <div
+                          key={alarm.alarmId}
+                          className={`${getAlarmRowClass(alarm.alarmType)} rounded-lg px-4 py-3 flex justify-between items-start`}
+                        >
+                          <div>
+                            <span className={`${getAlarmBadgeClass(alarm.alarmType)} text-xs font-semibold px-2 py-0.5 rounded mr-2`}>
+                              {alarm.alarmType}
+                            </span>
+                            <span className="text-sm text-gray-700">
+                              {alarm.alarmType} at {getDeviceNameForAlarm(alarm.deviceId)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-400 whitespace-nowrap ml-4">
+                            {formatDate(alarm.raisedTime)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Down Nodes */}
+            <div className="self-start bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <button
+                type="button"
+                onClick={toggleDownNodes}
+                className="w-full flex items-center justify-between gap-3 text-left"
+                aria-expanded={isDownNodesExpanded}
+                aria-controls="down-nodes-content"
+              >
+                <h2 className="text-lg md:text-xl font-semibold text-gray-700">Down Nodes</h2>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="inline-flex items-center rounded-full bg-rose-100 text-rose-800 px-2.5 py-0.5 font-semibold">
+                    {failedNodes} {failedNodes === 1 ? 'node' : 'nodes'}
+                  </span>
+                  <svg
+                    className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isDownNodesExpanded ? 'rotate-180' : ''}`}
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    aria-hidden="true"
+                  >
+                    <path d="M4.5 7 10 13l5.5-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </button>
+
+              {isDownNodesExpanded && (
+                <div id="down-nodes-content" className="mt-4">
+                  {downNodes.length === 0 ? (
+                    <div className="text-sm text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">
+                      No down nodes currently.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {downNodes.map((device) => (
+                        <div
+                          key={device.deviceId}
+                          className="bg-red-50 border-l-4 border-red-400 rounded-lg px-4 py-3 flex justify-between items-start"
+                        >
+                          <div>
+                            <span className="bg-red-200 text-red-800 text-xs font-semibold px-2 py-0.5 rounded mr-2">
+                              DOWN
+                            </span>
+                            <span className="text-sm text-gray-700">
+                              {device.deviceName} ({device.ip})
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-400 whitespace-nowrap ml-4">
+                            {device.regionName ?? device.region ?? '-'} / {device.provinceName ?? device.province ?? '-'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Network Nodes Table */}
