@@ -16,6 +16,7 @@ namespace INMS.API.Controllers
             _deviceService = deviceService;
         }
 
+        // Fetch all devices
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -23,6 +24,7 @@ namespace INMS.API.Controllers
             return Ok(devices);
         }
 
+        // Fetch devices visible to a specific user based on their area assignment
         [HttpGet("visible/{userId}")]
         public async Task<IActionResult> GetVisible(int userId)
         {
@@ -30,9 +32,11 @@ namespace INMS.API.Controllers
             return Ok(devices);
         }
 
+        // Fetch all devices with map coordinates and impact state
         [HttpGet("map")]
         public async Task<IActionResult> GetMapData() => Ok(await _deviceService.GetDevicesForMapAsync());
 
+        // Fetch a single device by ID
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -41,6 +45,7 @@ namespace INMS.API.Controllers
             return Ok(device);
         }
 
+        // Create a new device
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateDeviceDto dto)
         {
@@ -48,6 +53,7 @@ namespace INMS.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = created.DeviceId }, created);
         }
 
+        // Update an existing device by ID
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateDeviceDto dto)
         {
@@ -56,6 +62,7 @@ namespace INMS.API.Controllers
             return Ok(updated);
         }
 
+        // Delete a device by ID
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -64,6 +71,7 @@ namespace INMS.API.Controllers
             return NoContent();
         }
 
+        // Assign a device to a user
         [HttpPatch("{id:int}/assign")]
         public async Task<IActionResult> AssignDevice(int id, [FromBody] AssignDeviceRequest request)
         {
@@ -71,6 +79,7 @@ namespace INMS.API.Controllers
             return Ok("Device assigned successfully");
         }
 
+        // Simulate a device failure and trigger downstream impact propagation
         [HttpPost("{id}/simulate-failure")]
         public async Task<IActionResult> SimulateFailure(int id)
         {
@@ -80,6 +89,7 @@ namespace INMS.API.Controllers
             return Ok(new { message = "Device failure simulation started", deviceId = id });
         }
 
+        // Recover a simulated device failure and restore its status
         [HttpPost("{id}/recover")]
         public async Task<IActionResult> Recover(int id)
         {
@@ -93,6 +103,8 @@ namespace INMS.API.Controllers
         {
             public int UserId { get; set; }
         }
+
+        // Update only the status field of a device
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest request)
         {

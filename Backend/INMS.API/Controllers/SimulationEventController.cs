@@ -14,6 +14,7 @@ public class SimulationEventController : ControllerBase
         _simulationEventService = simulationEventService;
     }
 
+    // Log a new simulation event for a device
     [HttpPost]
     public async Task<IActionResult> LogEvent([FromBody] SimulationEventRequest request)
     {
@@ -21,6 +22,7 @@ public class SimulationEventController : ControllerBase
         return Ok(simulationEvent);
     }
 
+    // Fetch all simulation events
     [HttpGet]
     public async Task<IActionResult> GetAllEvents()
     {
@@ -28,6 +30,7 @@ public class SimulationEventController : ControllerBase
         return Ok(events);
     }
 
+    // Fetch all simulation events for a specific device
     [HttpGet("device/{deviceId}")]
     public async Task<IActionResult> GetDeviceEvents(int deviceId)
     {

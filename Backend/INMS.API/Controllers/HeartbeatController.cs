@@ -14,6 +14,7 @@ public class HeartbeatController : ControllerBase
         _heartbeatService = heartbeatService;
     }
 
+    // Record a heartbeat signal from a device
     [HttpPost]
     public async Task<IActionResult> RecordHeartbeat([FromBody] HeartbeatRequest request)
     {
@@ -21,6 +22,7 @@ public class HeartbeatController : ControllerBase
         return Ok(heartbeat);
     }
 
+    // Fetch all heartbeat records for a specific device
     [HttpGet("device/{deviceId}")]
     public async Task<IActionResult> GetDeviceHeartbeats(int deviceId)
     {
@@ -28,6 +30,7 @@ public class HeartbeatController : ControllerBase
         return Ok(heartbeats);
     }
 
+    // Fetch the most recent heartbeat for a specific device
     [HttpGet("device/{deviceId}/latest")]
     public async Task<IActionResult> GetLatestHeartbeat(int deviceId)
     {
