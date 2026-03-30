@@ -40,11 +40,12 @@ public class HeartbeatFailureDetectionService : BackgroundService
         }
     }
 
-    private async Task DetectFailures()
+        private async Task DetectFailures()
     {
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<INMS.Infrastructure.Persistence.AppDbContext>();
         var simulationEventService = scope.ServiceProvider.GetRequiredService<ISimulationEventService>();
+            var deviceService = scope.ServiceProvider.GetRequiredService<IDeviceService>();
         var currentTime = DateTime.UtcNow;
 
         var devices = await context.Devices.ToListAsync();
@@ -129,7 +130,7 @@ public class HeartbeatFailureDetectionService : BackgroundService
             }
         } while (hasChanges);
 
-        foreach (var device in devices)
+            foreach (var device in devices)
         {
             var oldStatus = device.Status;
             var resolvedStatus = computedStatusByDevice[device.DeviceId];
@@ -148,20 +149,26 @@ public class HeartbeatFailureDetectionService : BackgroundService
                 continue;
             }
 
-            if (resolvedStatus == DeviceStatus.DOWN && oldStatus != DeviceStatus.DOWN)
-            {
-                await simulationEventService.LogEventAsync(device.DeviceId, "HEARTBEAT_TIMEOUT");
-                _logger.LogWarning($"Device {device.DeviceId} marked OFFLINE due to heartbeat timeout");
-            }
+                if (resolvedStatus == DeviceStatus.DOWN && oldStatus != DeviceStatus.DOWN)
+                {
+                    await simulationEventService.LogEventAsync(device.DeviceId, "HEARTBEAT_TIMEOUT");
+                    _logger.LogWarning($"Device {device.DeviceId} marked OFFLINE due to heartbeat timeout");
+
+                    // Trigger downstream impact propagation and alarm creation for a true state change to DOWN
+                    await deviceService.PropagateImpact(device.DeviceId);
+                }
             else if (resolvedStatus == DeviceStatus.UP && oldStatus != DeviceStatus.UP)
             {
                 await simulationEventService.LogEventAsync(device.DeviceId, "HEARTBEAT_RECOVERED");
                 _logger.LogInformation($"Device {device.DeviceId} recovered and marked ONLINE");
             }
-            else if (resolvedStatus == DeviceStatus.UNREACHABLE)
-            {
-                _logger.LogInformation($"Device {device.DeviceId} marked UNREACHABLE due to upstream dependency");
-            }
+                else if (resolvedStatus == DeviceStatus.UNREACHABLE && oldStatus != DeviceStatus.UNREACHABLE)
+                {
+                    _logger.LogInformation($"Device {device.DeviceId} marked UNREACHABLE due to upstream dependency");
+
+                    // Ensure an unreachable alarm and impacted devices are recorded for this state change
+                    await deviceService.EnsureUnreachableAlarmAsync(device.DeviceId);
+                }
         }
 
         await context.SaveChangesAsync();

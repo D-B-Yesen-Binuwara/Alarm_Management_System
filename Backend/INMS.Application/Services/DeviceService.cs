@@ -167,7 +167,6 @@ namespace INMS.Application.Services
             var existing = await _deviceRepository.GetByIdAsync(id);
             if (existing == null) return null;
 
-            var shouldPropagateImpact = string.Equals(dto.Status, "DOWN", StringComparison.OrdinalIgnoreCase);
 
             existing.DeviceName = dto.DeviceName;
             existing.DeviceType = dto.DeviceType;
@@ -180,10 +179,6 @@ namespace INMS.Application.Services
 
             await _deviceRepository.UpdateAsync(existing);
 
-            if (shouldPropagateImpact)
-            {
-                await PropagateImpact(id);
-            }
 
             return existing;
         }
@@ -267,6 +262,82 @@ namespace INMS.Application.Services
             }
 
             return rootCause.RootCauseId;
+        }
+
+        public async Task EnsureUnreachableAlarmAsync(int deviceId)
+        {
+            var activeAlarm = await _context.Alarms
+                .Where(a => a.DeviceId == deviceId && a.IsActive && a.AlarmType == "NODE_UNREACHABLE")
+                .OrderByDescending(a => a.RaisedTime)
+                .FirstOrDefaultAsync();
+
+            if (activeAlarm == null)
+            {
+                activeAlarm = new Alarm
+                {
+                    DeviceId = deviceId,
+                    AlarmType = "NODE_UNREACHABLE",
+                    RaisedTime = DateTime.UtcNow,
+                    IsActive = true
+                };
+
+                await _context.Alarms.AddAsync(activeAlarm);
+                await _context.SaveChangesAsync();
+            }
+
+            var rootCause = await _context.RootCauses
+                .Where(rc => rc.AlarmId == activeAlarm.AlarmId)
+                .OrderByDescending(rc => rc.DetectedTime)
+                .FirstOrDefaultAsync();
+
+            if (rootCause == null)
+            {
+                rootCause = new RootCause
+                {
+                    AlarmId = activeAlarm.AlarmId,
+                    RootCauseDeviceId = deviceId,
+                    RootCauseType = "NODE_UNREACHABLE",
+                    DetectedTime = DateTime.UtcNow
+                };
+
+                await _context.RootCauses.AddAsync(rootCause);
+                await _context.SaveChangesAsync();
+            }
+
+            // Remove existing impacted rows for this root cause to prevent duplicates
+            var existingRows = await _context.ImpactedDevices
+                .Where(x => x.RootCauseId == rootCause.RootCauseId)
+                .ToListAsync();
+
+            if (existingRows.Count > 0)
+            {
+                _context.ImpactedDevices.RemoveRange(existingRows);
+            }
+
+            // Build impacted downstream device list
+            var allLinks = await _context.DeviceLinks
+                .AsNoTracking()
+                .ToListAsync();
+
+            var impactedDeviceIds = GetDownstreamDeviceIds(deviceId, allLinks);
+
+            if (impactedDeviceIds.Count == 0)
+            {
+                await _context.SaveChangesAsync();
+                return;
+            }
+
+            var impactedRows = impactedDeviceIds
+                .Select(did => new ImpactedDevice
+                {
+                    RootCauseId = rootCause.RootCauseId,
+                    DeviceId = did,
+                    ImpactType = "UNREACHABLE_DOWNSTREAM"
+                })
+                .ToList();
+
+            await _context.ImpactedDevices.AddRangeAsync(impactedRows);
+            await _context.SaveChangesAsync();
         }
 
         private static HashSet<int> GetDownstreamDeviceIds(
