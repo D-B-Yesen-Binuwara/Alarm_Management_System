@@ -2788,11 +2788,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Alarm_Management_System\\backend\\INMS.Application\\INMS.Application.csproj",
+      "projectUniqueName": "C:\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj",
       "projectName": "INMS.Application",
-      "projectPath": "C:\\Alarm_Management_System\\backend\\INMS.Application\\INMS.Application.csproj",
+      "projectPath": "C:\\Alarm_Management_System\\Backend\\INMS.Application\\INMS.Application.csproj",
       "packagesPath": "C:\\Users\\VICTUS\\.nuget\\packages\\",
-      "outputPath": "C:\\Alarm_Management_System\\backend\\INMS.Application\\obj\\",
+      "outputPath": "C:\\Alarm_Management_System\\Backend\\INMS.Application\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\VICTUS\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -2807,11 +2807,11 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "projectReferences": {
-            "C:\\Alarm_Management_System\\backend\\INMS.Domain\\INMS.Domain.csproj": {
-              "projectPath": "C:\\Alarm_Management_System\\backend\\INMS.Domain\\INMS.Domain.csproj"
+            "C:\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
+              "projectPath": "C:\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj"
             },
-            "C:\\Alarm_Management_System\\backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj": {
-              "projectPath": "C:\\Alarm_Management_System\\backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj"
+            "C:\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj": {
+              "projectPath": "C:\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj"
             }
           }
         }

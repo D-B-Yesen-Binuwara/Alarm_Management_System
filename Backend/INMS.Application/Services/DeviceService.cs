@@ -438,13 +438,10 @@ namespace INMS.Application.Services
             var device = await _context.Devices.FindAsync(id);
             if (device == null) return null;
 
+            // Simulation should only stop heartbeat emission. Do NOT force immediate Status change
+            // or trigger propagation here. The background detector will observe missing heartbeats
+            // and mark the device DOWN after the configured timeout.
             device.IsSimulatedDown = isSimulatedDown;
-            device.Status = isSimulatedDown ? DeviceStatus.DOWN : DeviceStatus.UP;
-
-            if (isSimulatedDown)
-            {
-                await PropagateImpact(id);
-            }
 
             await _context.SaveChangesAsync();
             return device;

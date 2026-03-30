@@ -68,11 +68,9 @@ public class HeartbeatFailureDetectionService : BackgroundService
         var baseStatusByDevice = new Dictionary<int, DeviceStatus>(devices.Count);
         foreach (var device in devices)
         {
-            if (device.IsSimulatedDown)
-            {
-                baseStatusByDevice[device.DeviceId] = DeviceStatus.DOWN;
-                continue;
-            }
+            // Do NOT treat `IsSimulatedDown` as an immediate DOWN signal here.
+            // Simulation should cause the scheduler to skip heartbeats; the detector
+            // will mark DOWN when heartbeats are missing for longer than the timeout.
 
             latestHeartbeats.TryGetValue(device.DeviceId, out var lastHeartbeat);
 
