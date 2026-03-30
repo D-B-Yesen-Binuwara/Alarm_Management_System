@@ -27,8 +27,7 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAreaAssignmentRepository, UserAreaAssignmentRepository>();
 builder.Services.AddScoped<UserAreaAssignmentService>();
-
-
+builder.Services.AddScoped<IImpactAnalysisService, ImpactAnalysisService>();
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -37,11 +36,8 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.MapControllers();
