@@ -1,36 +1,3 @@
-<<<<<<< HEAD
-# Ignore node_modules folder
-node_modules/
-
-# Ignore build output
-dist/
-
-# Ignore system files
-.DS_Store
-Thumbs.db
-
-# Ignore environment variables
-.env
-
-# Visual Studio
-.vs/
-*.user
-*.suo
-
-# Build folders
-bin/
-obj/
-
-# Logs
-*.log
-
-
-ALARM_CRUD_CHANGES.txt
-AUTOMATED_HEARTBEAT_MONITORING_SYSTEM.txt
-Understand.txt
-HEARTBEAT_MONITORING_SYSTEM_CORRECTIONS.txt
-DEVICE_TOPOLOGY_IMPLEMENTATION.txt
-=======
 # =========================
 # NODE / REACT
 # =========================
@@ -40,7 +7,15 @@ dist-ssr/
 build/
 *.local
 
-# Logs
+# =========================
+# .NET BUILD FILES (CRITICAL)
+# =========================
+bin/
+obj/
+
+# =========================
+# LOGS
+# =========================
 logs
 *.log
 npm-debug.log*
@@ -70,14 +45,15 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
-# Visual Studio (VERY IMPORTANT)
+# Visual Studio
 .vs/
+*.user
+*.suo
 
 # JetBrains
 .idea/
 
-# Visual Studio files
-*.suo
+# Visual Studio project files
 *.ntvs*
 *.njsproj
 *.sln
@@ -86,7 +62,7 @@ Thumbs.db
 *.sw?
 
 # =========================
-# CACHE
+# CACHE / TEMP
 # =========================
 .cache/
 .temp/
@@ -95,4 +71,8 @@ Thumbs.db
 # MISC
 # =========================
 coverage/
->>>>>>> thulasi/login-register
+
+# =========================
+# PROJECT DOC FILES (optional)
+# =========================
+*.txt
