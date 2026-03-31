@@ -76,16 +76,20 @@ export default function ImpactAnalysis() {
 
       {/* Selector */}
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-2">
-        <label className="text-sm font-medium text-gray-600">Select Source Node</label>
+        <label className="text-sm font-medium text-gray-600">
+          Select Source Node
+        </label>
         <div className="flex">
           <input
             type="text"
             value={nodeSearch}
             onChange={(e) => setNodeSearch(e.target.value)}
             placeholder="Search node by name or IP..."
-            className="border border-gray-300 rounded-l-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="border border-gray-300 rounded-l-lg px-3 py-2 text-sm
+            flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-          <button className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-r-lg transition whitespace-nowrap">
+          <button className="bg-blue-600 hover:bg-blue-700 text-white text-sm
+          font-medium px-4 py-2 rounded-r-lg transition whitespace-nowrap">
             Run Analysis
           </button>
         </div>
@@ -101,7 +105,9 @@ export default function ImpactAnalysis() {
 
       {/* Isolated Segments */}
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-        <h2 className="text-base font-semibold text-gray-700 mb-3">Isolated Network Segments</h2>
+        <h2 className="text-base font-semibold text-gray-700 mb-3">
+          Isolated Network Segments
+        </h2>
         <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded px-4 py-3 text-sm text-yellow-800">
           reg3: {affectedCount} nodes affected
         </div>
