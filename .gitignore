@@ -23,6 +23,9 @@ obj/
 # Logs
 *.log
 
+bin/
+obj/
+
 
 CORE_FEATURES_SUMMARY.txt
 IMPLEMENTATION_DOCUMENTATION.txt
