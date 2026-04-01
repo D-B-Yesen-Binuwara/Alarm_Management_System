@@ -5,6 +5,7 @@ const UserProfile = () => {
     const [loading, setLoading] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [editFormData, setEditFormData] = useState(null);
     const [formErrors, setFormErrors] = useState({});
     const [passwordFields, setPasswordFields] = useState({
@@ -17,7 +18,7 @@ const UserProfile = () => {
         // Simulate an API call mapping to User.cs
         setTimeout(() => {
             setUserData({
-                userId: 'USR-2094',
+                userId: '748392',
                 username: 'janedoe99',
                 fullName: 'Jane Doe',
                 passwordHash: 'N0c0perat0r_pwd!', // Simulated real password
@@ -36,9 +37,14 @@ const UserProfile = () => {
 
     const handleEditClick = () => {
         setEditFormData({ ...userData });
-        setPasswordFields({ oldPassword: '', newPassword: '', confirmPassword: '' });
         setFormErrors({});
         setIsEditModalOpen(true);
+    };
+
+    const handleChangePasswordClick = () => {
+        setPasswordFields({ oldPassword: '', newPassword: '', confirmPassword: '' });
+        setFormErrors({});
+        setIsPasswordModalOpen(true);
     };
 
     const handleInputChange = (field, value) => {
@@ -55,7 +61,18 @@ const UserProfile = () => {
         if (!editFormData.username?.trim()) errors.username = 'Username cannot be empty.';
         if (!editFormData.fullName?.trim()) errors.fullName = 'Full Name cannot be empty.';
 
-        // Validate passwords (now strictly required to save)
+        if (Object.keys(errors).length > 0) {
+            setFormErrors(errors);
+            return;
+        }
+
+        setUserData(editFormData);
+        setIsEditModalOpen(false);
+    };
+
+    const handleSavePassword = () => {
+        const errors = {};
+
         if (!passwordFields.oldPassword) {
             errors.oldPassword = 'Old password cannot be empty.';
         } else if (passwordFields.oldPassword !== userData.passwordHash) {
@@ -74,26 +91,26 @@ const UserProfile = () => {
         } else if (passwordFields.newPassword !== passwordFields.confirmPassword) {
             errors.confirmPassword = 'New password and confirm password do not match.';
         }
-        
-        // Apply the new password
-        if (!errors.oldPassword && !errors.newPassword && !errors.confirmPassword) {
-            editFormData.passwordHash = passwordFields.newPassword;
-        }
 
         if (Object.keys(errors).length > 0) {
             setFormErrors(errors);
             return;
         }
 
-        setUserData(editFormData);
-        setIsEditModalOpen(false);
+        setUserData(prev => ({ ...prev, passwordHash: passwordFields.newPassword }));
+        setIsPasswordModalOpen(false);
     };
 
     const handleCloseModal = () => {
         setIsEditModalOpen(false);
         setEditFormData(null);
         setFormErrors({});
+    };
+
+    const handleClosePasswordModal = () => {
+        setIsPasswordModalOpen(false);
         setPasswordFields({ oldPassword: '', newPassword: '', confirmPassword: '' });
+        setFormErrors({});
     };
 
     if (loading) {
@@ -124,7 +141,7 @@ const UserProfile = () => {
                             <table className="w-full text-sm">
                                 <tbody>
                                     <tr className="border-b border-slate-100">
-                                        <td className="py-3 text-slate-500 w-1/3">User ID</td>
+                                        <td className="py-3 text-slate-500 w-1/3">Service Number</td>
                                         <td className="py-3 font-medium text-slate-800">{userData.userId}</td>
                                     </tr>
                                     <tr className="border-b border-slate-100">
@@ -157,6 +174,12 @@ const UserProfile = () => {
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                         </svg>
                                                     )}
+                                                </button>
+                                                <button
+                                                    onClick={handleChangePasswordClick}
+                                                    className="ml-2 text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 px-3 py-1.5 rounded-md border border-emerald-200 transition-colors"
+                                                >
+                                                    Change Password
                                                 </button>
                                             </div>
                                         </td>
@@ -200,16 +223,16 @@ const UserProfile = () => {
 
                         {/* Modal Body */}
                         <div className="p-6 space-y-5">
-                            {/* User ID (Read-only) */}
+                            {/* Service Number (Read-only) */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1.5">User ID</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Service Number</label>
                                 <input
                                     type="text"
                                     value={editFormData?.userId || ''}
                                     disabled
                                     className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed focus:outline-none"
                                 />
-                                <p className="text-xs text-slate-400 mt-1.5">User ID cannot be changed</p>
+                                <p className="text-xs text-slate-400 mt-1.5">Service number cannot be changed</p>
                             </div>
 
                             {/* Username */}
@@ -236,7 +259,58 @@ const UserProfile = () => {
                                 {formErrors.fullName && <p className="text-sm text-red-500 mt-1.5">{formErrors.fullName}</p>}
                             </div>
 
-                            {/* Password */}
+                            {/* Role */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Role</label>
+                                <input
+                                    type="text"
+                                    value={editFormData?.role || ''}
+                                    disabled
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed focus:outline-none"
+                                />
+                                <p className="text-xs text-slate-400 mt-1.5">Role cannot be changed</p>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex gap-3 sticky bottom-0 backdrop-blur-md">
+                            <button
+                                onClick={handleCloseModal}
+                                className="flex-1 bg-white border border-slate-300 text-slate-700 text-sm font-semibold py-2.5 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveProfile}
+                                className="flex-1 bg-emerald-500 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-emerald-600 transition-colors shadow-sm shadow-emerald-500/20"
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Change Password Modal */}
+            {isPasswordModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-slate-100">
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-slate-900 via-sky-900 to-slate-800 px-6 py-4 border-b border-emerald-400/40 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+                            <h3 className="font-semibold text-white tracking-wide">Change Password</h3>
+                            <button
+                                onClick={handleClosePasswordModal}
+                                className="text-slate-400 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors focus:outline-none"
+                                title="Close"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-5">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Old Password</label>
                                 <input
@@ -269,33 +343,21 @@ const UserProfile = () => {
                                 />
                                 {formErrors.confirmPassword && <p className="text-sm text-red-500 mt-1.5">{formErrors.confirmPassword}</p>}
                             </div>
-
-                            {/* Role */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Role</label>
-                                <input
-                                    type="text"
-                                    value={editFormData?.role || ''}
-                                    disabled
-                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed focus:outline-none"
-                                />
-                                <p className="text-xs text-slate-400 mt-1.5">Role cannot be changed</p>
-                            </div>
                         </div>
 
                         {/* Modal Footer */}
                         <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex gap-3 sticky bottom-0 backdrop-blur-md">
                             <button
-                                onClick={handleCloseModal}
+                                onClick={handleClosePasswordModal}
                                 className="flex-1 bg-white border border-slate-300 text-slate-700 text-sm font-semibold py-2.5 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
                             >
                                 Cancel
                             </button>
                             <button
-                                onClick={handleSaveProfile}
+                                onClick={handleSavePassword}
                                 className="flex-1 bg-emerald-500 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-emerald-600 transition-colors shadow-sm shadow-emerald-500/20"
                             >
-                                Save Changes
+                                Update Password
                             </button>
                         </div>
                     </div>
