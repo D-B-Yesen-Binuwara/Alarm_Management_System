@@ -1,0 +1,96 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{42B8921C-93C7-42F9-94D2-F4BDB4969B2A}|INMS.API\\INMS.API.csproj|c:\\users\\thulasi\\desktop\\inms\\backend\\inms.api\\frontend-inms\\vite.config.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{42B8921C-93C7-42F9-94D2-F4BDB4969B2A}|INMS.API\\INMS.API.csproj|solutionrelative:inms.api\\frontend-inms\\vite.config.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{42B8921C-93C7-42F9-94D2-F4BDB4969B2A}|INMS.API\\INMS.API.csproj|c:\\users\\thulasi\\desktop\\inms\\backend\\inms.api\\inms.api.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}",
+      "RelativeMoniker": "D:0:0:{42B8921C-93C7-42F9-94D2-F4BDB4969B2A}|INMS.API\\INMS.API.csproj|solutionrelative:inms.api\\inms.api.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{42B8921C-93C7-42F9-94D2-F4BDB4969B2A}|INMS.API\\INMS.API.csproj|c:\\users\\thulasi\\desktop\\inms\\backend\\inms.api\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{42B8921C-93C7-42F9-94D2-F4BDB4969B2A}|INMS.API\\INMS.API.csproj|solutionrelative:inms.api\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{42B8921C-93C7-42F9-94D2-F4BDB4969B2A}|INMS.API\\INMS.API.csproj|c:\\users\\thulasi\\desktop\\inms\\backend\\inms.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{42B8921C-93C7-42F9-94D2-F4BDB4969B2A}|INMS.API\\INMS.API.csproj|solutionrelative:inms.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 4,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:29:0:{e8034f19-ab72-4f06-83fd-f6832b41aa63}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "launchSettings.json",
+              "DocumentMoniker": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.API\\Properties\\launchSettings.json",
+              "RelativeDocumentMoniker": "INMS.API\\Properties\\launchSettings.json",
+              "ToolTip": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.API\\Properties\\launchSettings.json",
+              "RelativeToolTip": "INMS.API\\Properties\\launchSettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAUwAcAAAAvAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-04-02T07:10:53.896Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "INMS.API.http",
+              "DocumentMoniker": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.API\\INMS.API.http",
+              "RelativeDocumentMoniker": "INMS.API\\INMS.API.http",
+              "ToolTip": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.API\\INMS.API.http",
+              "RelativeToolTip": "INMS.API\\INMS.API.http",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAuAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003502|",
+              "WhenOpened": "2026-04-02T07:09:56.113Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "vite.config.js",
+              "DocumentMoniker": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.API\\Frontend-INMS\\vite.config.js",
+              "RelativeDocumentMoniker": "INMS.API\\Frontend-INMS\\vite.config.js",
+              "ToolTip": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.API\\Frontend-INMS\\vite.config.js",
+              "RelativeToolTip": "INMS.API\\Frontend-INMS\\vite.config.js",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAqwAYAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-04-02T07:09:13.845Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.API\\appsettings.json",
+              "RelativeDocumentMoniker": "INMS.API\\appsettings.json",
+              "ToolTip": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.API\\appsettings.json",
+              "RelativeToolTip": "INMS.API\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-04-02T06:24:51.077Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
