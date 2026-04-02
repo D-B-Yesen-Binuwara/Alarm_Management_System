@@ -15,12 +15,14 @@ namespace INMS.API.Controllers
             _roleService = roleService;
         }
 
+        // Fetch all roles
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             return Ok(await _roleService.GetAllAsync());
         }
 
+        // Fetch a single role by ID
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -29,6 +31,7 @@ namespace INMS.API.Controllers
             return Ok(role);
         }
 
+        // Create a new role
         [HttpPost]
         public async Task<IActionResult> Create(Role role)
         {
@@ -36,6 +39,7 @@ namespace INMS.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = created.RoleId }, created);
         }
 
+        // Update an existing role by ID
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, Role role)
         {
@@ -43,6 +47,7 @@ namespace INMS.API.Controllers
             return Ok(updated);
         }
 
+        // Delete a role by ID
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
