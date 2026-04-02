@@ -4,6 +4,18 @@ using INMS.Domain.Interfaces;
 using INMS.Infrastructure.Repositories;
 using INMS.Application.Services;
 using INMS.Application.Interfaces;
+using INMS.API.BackgroundServices;
+
+// Load .env file into environment variables
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+if (File.Exists(envPath))
+    foreach (var line in File.ReadAllLines(envPath)
+        .Where(l => !string.IsNullOrWhiteSpace(l) && !l.StartsWith('#') && l.Contains('=')))
+    {
+        var parts = line.Split('=', 2);
+        var key = parts[0].Trim().Replace(":", "__");
+        Environment.SetEnvironmentVariable(key, parts[1].Trim());
+    }
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,45 +27,50 @@ builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<IDeviceLinkRepository, DeviceLinkRepository>();
 builder.Services.AddScoped<IDeviceLinkService, DeviceLinkService>();
+builder.Services.AddScoped<IRegionRepository, RegionRepository>();
+builder.Services.AddScoped<IRegionService, RegionService>();
+builder.Services.AddScoped<IProvinceRepository, ProvinceRepository>();
+builder.Services.AddScoped<IProvinceService, ProvinceService>();
+builder.Services.AddScoped<ILEARepository, LEARepository>();
+builder.Services.AddScoped<ILEAService, LEAService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IUserAreaAssignmentRepository, UserAreaAssignmentRepository>();
+builder.Services.AddScoped<UserAreaAssignmentService>();
+
+
+builder.Services.AddScoped<IAlarmRepository, AlarmRepository>();
+builder.Services.AddScoped<IAlarmService, AlarmService>();
+
+builder.Services.AddScoped<IHeartbeatRepository, HeartbeatRepository>();
+builder.Services.AddScoped<IHeartbeatService, HeartbeatService>();
+
+builder.Services.AddScoped<ISimulationEventRepository, SimulationEventRepository>();
+builder.Services.AddScoped<ISimulationEventService, SimulationEventService>();
+
+// Background Services
+builder.Services.AddHostedService<HeartbeatSchedulerService>();
+builder.Services.AddHostedService<HeartbeatFailureDetectionService>();
 
 builder.Services.AddControllers();
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
+var app = builder.Build();  
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 app.MapControllers();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

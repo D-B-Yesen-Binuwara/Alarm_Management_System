@@ -15,6 +15,7 @@ namespace INMS.API.Controllers
             _service = service;
         }
 
+        // Create a parent-child link between two devices
         [HttpPost]
         public async Task<IActionResult> CreateLink(CreateLinkRequest request)
         {
@@ -22,12 +23,14 @@ namespace INMS.API.Controllers
             return Ok(link);
         }
 
+        // Fetch all device links
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             return Ok(await _service.GetAllLinksAsync());
         }
 
+        // Delete a device link by ID
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
