@@ -167,6 +167,10 @@ ALTER TABLE Region ADD Description NVARCHAR(255) NULL;
 -- Rename Role column
 EXEC sp_rename 'Role.RoleName', 'Name', 'COLUMN';
 
+-- Add ServiceId and Email columns to User table
+ALTER TABLE [User] ADD ServiceId NVARCHAR(50) NULL;
+ALTER TABLE [User] ADD Email NVARCHAR(150) NULL;
+
 /*------------------------------------------------*/
 USE INMS_SLT;
 
@@ -332,4 +336,27 @@ WHERE DeviceName IN (
     'CEAN-Colombo-North-01',
     'MSAN-Colombo-A1',
     'MSAN-Colombo-A2'
+);
+
+-- Add ServiceId and Email columns to User table
+ALTER TABLE [User] ADD ServiceId NVARCHAR(50) NULL;
+ALTER TABLE [User] ADD Email NVARCHAR(150) NULL;
+
+/* ACCOUNT REQUESTS ------------------------------------------------------------------ */
+CREATE TABLE AccountRequest (
+    RequestId    INT IDENTITY(1,1) PRIMARY KEY,
+    FullName     NVARCHAR(150)  NOT NULL,
+    Email        NVARCHAR(150)  NOT NULL,
+    ServiceId    NVARCHAR(50)   NOT NULL,
+    RoleId       INT            NOT NULL,
+    RegionId     INT            NOT NULL,
+    ProvinceId   INT            NULL,
+    LEAId        INT            NULL,
+    RequestedAt  DATETIME       NOT NULL DEFAULT GETDATE(),
+    Status       NVARCHAR(20)   NOT NULL DEFAULT 'PENDING', -- PENDING | APPROVED | REJECTED
+
+    CONSTRAINT FK_AccountRequest_Role     FOREIGN KEY (RoleId)     REFERENCES Role(RoleId),
+    CONSTRAINT FK_AccountRequest_Region   FOREIGN KEY (RegionId)   REFERENCES Region(RegionId),
+    CONSTRAINT FK_AccountRequest_Province FOREIGN KEY (ProvinceId) REFERENCES Province(ProvinceId),
+    CONSTRAINT FK_AccountRequest_LEA      FOREIGN KEY (LEAId)      REFERENCES LEA(LEAId)
 );

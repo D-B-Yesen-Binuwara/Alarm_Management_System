@@ -35,6 +35,8 @@ builder.Services.AddScoped<ILEARepository, LEARepository>();
 builder.Services.AddScoped<ILEAService, LEAService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAccountRequestRepository, AccountRequestRepository>();
+builder.Services.AddScoped<IAccountRequestService, AccountRequestService>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAreaAssignmentRepository, UserAreaAssignmentRepository>();
