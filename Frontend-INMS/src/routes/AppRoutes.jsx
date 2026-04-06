@@ -6,6 +6,7 @@ import ImpactAnalysis from '../pages/ImpactAnalysis';
 import Login from '../pages/Login';
 import UserRegistration from '../pages/UserRegistration';
 // import ProtectedRoute from './ProtectedRoute';
+import UserProfile from '../pages/UserProfile';
 
 const AppRoutes = () => {
   return (
@@ -42,6 +43,7 @@ const AppRoutes = () => {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/network-map" element={<NetworkMap />} />
       <Route path="/impact-analysis" element={<ImpactAnalysis />} />
+      <Route path="/profile" element={<UserProfile />} />
 
       {/*
       <Route
@@ -63,6 +65,8 @@ const AppRoutes = () => {
       */}
       <Route path="/correlation" element={<PlaceholderPage title="Correlation" />} />
       <Route path="/alarmlogs" element={<PlaceholderPage title="AlarmLogs" />} />
+      <Route path="/events" element={<PlaceholderPage title="Events" />} />
+      <Route path="/home" element={<PlaceholderPage title="Home" />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

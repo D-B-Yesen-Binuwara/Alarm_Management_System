@@ -57,6 +57,16 @@ const Navbar = () => {
         >
           Alarm Logs
         </Link>
+        <div className="h-6 w-px bg-emerald-400/30 mx-1 align-middle self-center hidden md:block"></div>
+        <Link 
+          to="/profile"
+          className={`flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium hover:bg-emerald-400/20 hover:text-white transition ${isActive('/profile')}`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+          Profile
+        </Link>
       </div>
     </nav>
   );
