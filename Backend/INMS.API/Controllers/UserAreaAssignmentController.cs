@@ -14,6 +14,7 @@ public class UserAreaAssignmentController : ControllerBase
         _service = service;
     }
 
+    // Assign a user to a specific area (LEA, Province, or Region)
     [HttpPost]
     public async Task<IActionResult> Assign(int userId, string areaType, int areaId)
     {
