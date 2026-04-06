@@ -1,3 +1,4 @@
+using INMS.Application.DTOs;
 using INMS.Domain.Entities;
 
 namespace INMS.Application.Interfaces;
@@ -10,4 +11,5 @@ public interface IAlarmService
     Task<Alarm> CreateAsync(Alarm alarm);
     Task<Alarm> UpdateAsync(int id, Alarm alarm);
     Task<bool> DeleteAsync(int id);
+    Task<List<AlarmListDto>> GetFilteredAsync(AlarmQueryParams queryParams);
 }
