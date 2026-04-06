@@ -193,32 +193,32 @@ namespace INMS.Application.Services
             var rootCauseId = await EnsureRootCauseAsync(rootDeviceId);
 
             // Rebuild the impacted rows for this root device to keep records current.
-            var existingRows = await _context.ImpactedDevices
-                .Where(x => x.RootCauseId == rootCauseId)
-                .ToListAsync();
-
-            if (existingRows.Count > 0)
-            {
-                _context.ImpactedDevices.RemoveRange(existingRows);
-            }
-
-            if (impactedDeviceIds.Count == 0)
-            {
-                await _context.SaveChangesAsync();
-                return;
-            }
-
-            var impactedRows = impactedDeviceIds
-                .Select(deviceId => new ImpactedDevice
-                {
-                    RootCauseId = rootCauseId,
-                    DeviceId = deviceId,
-                    ImpactType = "DOWNSTREAM"
-                })
-                .ToList();
-
-            await _context.ImpactedDevices.AddRangeAsync(impactedRows);
-            await _context.SaveChangesAsync();
+            // var existingRows = await _context.ImpactedDevices
+            //     .Where(x => x.RootCauseId == rootCauseId)
+            //     .ToListAsync();
+            //
+            // if (existingRows.Count > 0)
+            // {
+            //     _context.ImpactedDevices.RemoveRange(existingRows);
+            // }
+            //
+            // if (impactedDeviceIds.Count == 0)
+            // {
+            //     await _context.SaveChangesAsync();
+            //     return;
+            // }
+            //
+            // var impactedRows = impactedDeviceIds
+            //     .Select(deviceId => new ImpactedDevice
+            //     {
+            //         RootCauseId = rootCauseId,
+            //         DeviceId = deviceId,
+            //         ImpactType = "DOWNSTREAM"
+            //     })
+            //     .ToList();
+            //
+            // await _context.ImpactedDevices.AddRangeAsync(impactedRows);
+            // await _context.SaveChangesAsync();
         }
 
         private async Task<int> EnsureRootCauseAsync(int rootDeviceId)
@@ -247,21 +247,21 @@ namespace INMS.Application.Services
                 .OrderByDescending(rc => rc.DetectedTime)
                 .FirstOrDefaultAsync();
 
-            if (rootCause == null)
-            {
-                rootCause = new RootCause
-                {
-                    AlarmId = activeAlarm.AlarmId,
-                    RootCauseDeviceId = rootDeviceId,
-                    RootCauseType = "NODE_FAILURE",
-                    DetectedTime = DateTime.UtcNow
-                };
+            // if (rootCause == null)
+            // {
+            //     rootCause = new RootCause
+            //     {
+            //         AlarmId = activeAlarm.AlarmId,
+            //         RootCauseDeviceId = rootDeviceId,
+            //         RootCauseType = "NODE_FAILURE",
+            //         DetectedTime = DateTime.UtcNow
+            //     };
+            //
+            //     await _context.RootCauses.AddAsync(rootCause);
+            //     await _context.SaveChangesAsync();
+            // }
 
-                await _context.RootCauses.AddAsync(rootCause);
-                await _context.SaveChangesAsync();
-            }
-
-            return rootCause.RootCauseId;
+            return rootCause?.RootCauseId ?? 0;
         }
 
         public async Task EnsureUnreachableAlarmAsync(int deviceId)
@@ -356,34 +356,34 @@ namespace INMS.Application.Services
             var rootCauseId = foundRootCause.RootCauseId;
 
             // Rebuild impacted rows for this existing root cause so downstream mapping includes unreachable devices
-            var existingRows = await _context.ImpactedDevices
-                .Where(x => x.RootCauseId == rootCauseId)
-                .ToListAsync();
-
-            if (existingRows.Count > 0)
-            {
-                _context.ImpactedDevices.RemoveRange(existingRows);
-            }
-
-            var impactedDeviceIds = GetDownstreamDeviceIds(foundRootCause.RootCauseDeviceId, allLinks);
-
-            if (impactedDeviceIds.Count == 0)
-            {
-                await _context.SaveChangesAsync();
-                return;
-            }
-
-            var impactedRows = impactedDeviceIds
-                .Select(did => new ImpactedDevice
-                {
-                    RootCauseId = rootCauseId,
-                    DeviceId = did,
-                    ImpactType = "UNREACHABLE_DOWNSTREAM"
-                })
-                .ToList();
-
-            await _context.ImpactedDevices.AddRangeAsync(impactedRows);
-            await _context.SaveChangesAsync();
+            // var existingRows = await _context.ImpactedDevices
+            //     .Where(x => x.RootCauseId == rootCauseId)
+            //     .ToListAsync();
+            //
+            // if (existingRows.Count > 0)
+            // {
+            //     _context.ImpactedDevices.RemoveRange(existingRows);
+            // }
+            //
+            // var impactedDeviceIds = GetDownstreamDeviceIds(foundRootCause.RootCauseDeviceId, allLinks);
+            //
+            // if (impactedDeviceIds.Count == 0)
+            // {
+            //     await _context.SaveChangesAsync();
+            //     return;
+            // }
+            //
+            // var impactedRows = impactedDeviceIds
+            //     .Select(did => new ImpactedDevice
+            //     {
+            //         RootCauseId = rootCauseId,
+            //         DeviceId = did,
+            //         ImpactType = "UNREACHABLE_DOWNSTREAM"
+            //     })
+            //     .ToList();
+            //
+            // await _context.ImpactedDevices.AddRangeAsync(impactedRows);
+            // await _context.SaveChangesAsync();
         }
 
         private static HashSet<int> GetDownstreamDeviceIds(
