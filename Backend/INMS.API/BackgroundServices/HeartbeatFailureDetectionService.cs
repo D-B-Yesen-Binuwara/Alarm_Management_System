@@ -8,8 +8,8 @@ public class HeartbeatFailureDetectionService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<HeartbeatFailureDetectionService> _logger;
-    private const int CheckIntervalSeconds = 30;
-    private const int FailureTimeoutSeconds = 90;
+    private const int CheckIntervalSeconds = 10;
+    private const int FailureTimeoutSeconds = 30;
 
     public HeartbeatFailureDetectionService(
         IServiceProvider serviceProvider,
@@ -144,7 +144,6 @@ public class HeartbeatFailureDetectionService : BackgroundService
             {
                 await simulationEventService.LogEventAsync(device.DeviceId, "SIMULATED_DOWN");
                 _logger.LogWarning($"Device {device.DeviceId} forced DOWN because IsSimulatedDown=true");
-                continue;
             }
 
                 if (resolvedStatus == DeviceStatus.DOWN && oldStatus != DeviceStatus.DOWN)
@@ -159,6 +158,8 @@ public class HeartbeatFailureDetectionService : BackgroundService
             {
                 await simulationEventService.LogEventAsync(device.DeviceId, "HEARTBEAT_RECOVERED");
                 _logger.LogInformation($"Device {device.DeviceId} recovered and marked ONLINE");
+                // Clear alarms when a device recovers to UP so active alarms are closed
+                await deviceService.ClearAlarmsAsync(device.DeviceId);
             }
                 else if (resolvedStatus == DeviceStatus.UNREACHABLE && oldStatus != DeviceStatus.UNREACHABLE)
                 {

@@ -537,27 +537,6 @@ namespace INMS.Application.Services
                     a.ClearedTime = now;
                 }
 
-                // Optionally record a RECOVERY event for the device.
-                // Avoid spamming repeated RECOVERY records: only insert if there isn't
-                // a recent RECOVERY for this device (within the last minute).
-                var latestRecovery = await _context.Alarms
-                    .Where(a => a.DeviceId == deviceId && a.AlarmType == "RECOVERY")
-                    .OrderByDescending(a => a.RaisedTime)
-                    .FirstOrDefaultAsync();
-
-                if (latestRecovery == null || latestRecovery.RaisedTime < now.AddMinutes(-1))
-                {
-                    var recovery = new Alarm
-                    {
-                        DeviceId = deviceId,
-                        AlarmType = "RECOVERY",
-                        RaisedTime = now,
-                        IsActive = false,
-                        ClearedTime = now
-                    };
-
-                    await _context.Alarms.AddAsync(recovery);
-                }
             }
 
             // Find root causes where this device was the failed root and clear impacted downstream alarms
