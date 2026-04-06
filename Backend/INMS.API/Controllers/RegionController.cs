@@ -15,6 +15,7 @@ namespace INMS.API.Controllers
             _regionService = regionService;
         }
 
+        // Fetch all regions
         [HttpGet]
         public async Task<IActionResult> GetAllRegions()
         {
@@ -22,17 +23,16 @@ namespace INMS.API.Controllers
             return Ok(regions);
         }
 
+        // Fetch a single region by ID
         [HttpGet("{id}")]
         public async Task<IActionResult> GetRegion(int id)
         {
             var region = await _regionService.GetRegionByIdAsync(id);
-
-            if (region == null)
-                return NotFound();
-
+            if (region == null) return NotFound();
             return Ok(region);
         }
 
+        // Create a new region
         [HttpPost]
         public async Task<IActionResult> CreateRegion([FromBody] Region region)
         {
@@ -40,6 +40,7 @@ namespace INMS.API.Controllers
             return Ok(created);
         }
 
+        // Update an existing region by ID
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateRegion(int id, [FromBody] Region region)
         {
@@ -47,6 +48,7 @@ namespace INMS.API.Controllers
             return Ok(updated);
         }
 
+        // Delete a region by ID
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRegion(int id)
         {

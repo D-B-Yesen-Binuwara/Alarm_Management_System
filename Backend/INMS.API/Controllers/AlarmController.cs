@@ -15,6 +15,7 @@ public class AlarmController : ControllerBase
         _alarmService = alarmService;
     }
 
+    // Fetch all alarms
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -22,6 +23,7 @@ public class AlarmController : ControllerBase
         return Ok(alarms);
     }
 
+    // Fetch a single alarm by ID
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -30,6 +32,7 @@ public class AlarmController : ControllerBase
         return Ok(alarm);
     }
 
+    // Fetch all alarms raised against a specific device
     [HttpGet("device/{deviceId}")]
     public async Task<IActionResult> GetByDeviceId(int deviceId)
     {
@@ -37,6 +40,7 @@ public class AlarmController : ControllerBase
         return Ok(alarms);
     }
 
+    // Create a new alarm
     [HttpPost]
     public async Task<IActionResult> Create(Alarm alarm)
     {
@@ -44,6 +48,7 @@ public class AlarmController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = created.AlarmId }, created);
     }
 
+    // Update an existing alarm by ID
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Alarm alarm)
     {
@@ -52,6 +57,7 @@ public class AlarmController : ControllerBase
         return Ok(updated);
     }
 
+    // Delete an alarm by ID
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
