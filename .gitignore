@@ -23,8 +23,12 @@ obj/
 # Logs
 *.log
 
+bin/
+obj/
+
 
 CORE_FEATURES_SUMMARY.txt
 IMPLEMENTATION_DOCUMENTATION.txt
 REMOVE_MANUAL_STATUS_UPDATE.txt
 Issues.md
+

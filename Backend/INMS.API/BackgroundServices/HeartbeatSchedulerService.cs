@@ -7,7 +7,7 @@ public class HeartbeatSchedulerService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<HeartbeatSchedulerService> _logger;
-    private const int HeartbeatIntervalSeconds = 30;
+    private const int HeartbeatIntervalSeconds = 10;
 
     public HeartbeatSchedulerService(
         IServiceProvider serviceProvider,
