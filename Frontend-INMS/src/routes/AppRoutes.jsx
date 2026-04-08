@@ -5,6 +5,7 @@ import NetworkMap from '../pages/NetworkMap';
 import ImpactAnalysis from '../pages/ImpactAnalysis';
 import UserProfile from '../pages/UserProfile';
 import UserManagement from '../pages/UserManagement';
+import DeviceManagement from '../pages/DeviceManagement';
 
 const AppRoutes = () => {
   return (
@@ -13,6 +14,7 @@ const AppRoutes = () => {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/network-map" element={<NetworkMap />} />
       <Route path="/impact-analysis" element={<ImpactAnalysis />} />
+      <Route path="/device-management" element={<DeviceManagement />} />
       <Route path="/profile" element={<UserProfile />} />
       <Route path="/user-management" element={<UserManagement />} />
 
