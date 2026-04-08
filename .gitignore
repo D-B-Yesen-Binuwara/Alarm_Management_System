@@ -19,6 +19,14 @@ Thumbs.db
 # Build folders
 bin/
 obj/
+*.csproj.nuget.dgspec.json
+*.csproj.nuget.g.targets
+*.csproj.nuget.g.props
+project.assets.json
+
+# Temporary files
+*.safe.sql
+.DS_Store
 
 # Logs
 *.log

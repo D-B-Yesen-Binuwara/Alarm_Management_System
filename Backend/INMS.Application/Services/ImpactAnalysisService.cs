@@ -9,6 +9,9 @@ namespace INMS.Application.Services;
 public class ImpactAnalysisService : IImpactAnalysisService
 {
     private readonly AppDbContext _context;
+    private const string NodeDownAlarmType = "NODE_DOWN";
+    private const string RootCauseNodeFailureType = "NODE_FAILURE";
+    private const string ImpactTypeDownstream = "DOWNSTREAM";
 
     public ImpactAnalysisService(AppDbContext context)
     {
@@ -33,12 +36,18 @@ public class ImpactAnalysisService : IImpactAnalysisService
             .Where(link => link.ChildDeviceId == deviceId)
             .ToList();
 
-        var isRootFailure = parentLinks.Count == 0 ||
-            parentLinks.All(link => link.ParentDevice != null && link.ParentDevice.Status == nameof(DeviceStatus.UP));
+        var hasDownOrUnreachableParent = parentLinks.Any(link =>
+            link.ParentDevice == null ||
+            link.ParentDevice.Status == nameof(DeviceStatus.DOWN) ||
+            link.ParentDevice.Status == nameof(DeviceStatus.IMPACTED));
+
+        var isRootFailure = parentLinks.Count == 0 || !hasDownOrUnreachableParent;
 
         if (!isRootFailure)
         {
             await ClearRootCauseAsync(deviceId);
+            device.Status = nameof(DeviceStatus.IMPACTED);
+            await _context.SaveChangesAsync();
             return;
         }
 
@@ -61,11 +70,20 @@ public class ImpactAnalysisService : IImpactAnalysisService
                 {
                     RootCauseId = rootCauseId,
                     DeviceId = impactedDeviceId,
-                    ImpactType = "DOWNSTREAM"
+                    ImpactType = ImpactTypeDownstream
                 })
                 .ToList();
 
             await _context.ImpactedDevices.AddRangeAsync(impactedRows);
+
+            var impactedDevices = await _context.Devices
+                .Where(d => impactedDeviceIds.Contains(d.DeviceId) && d.Status != nameof(DeviceStatus.DOWN))
+                .ToListAsync();
+
+            foreach (var impactedDevice in impactedDevices)
+            {
+                impactedDevice.Status = nameof(DeviceStatus.IMPACTED);
+            }
         }
 
         await _context.SaveChangesAsync();
@@ -73,15 +91,34 @@ public class ImpactAnalysisService : IImpactAnalysisService
 
     public async Task ClearImpactAsync(int deviceId)
     {
-        await ClearRootCauseAsync(deviceId);
+        var impactedDeviceIds = await ClearRootCauseInternalAsync(deviceId);
 
-        var directImpactRows = await _context.ImpactedDevices
-            .Where(id => id.DeviceId == deviceId)
-            .ToListAsync();
+        // Persist removals first, then re-check remaining impacts from database.
+        await _context.SaveChangesAsync();
 
-        if (directImpactRows.Count > 0)
+        if (impactedDeviceIds.Count > 0)
         {
-            _context.ImpactedDevices.RemoveRange(directImpactRows);
+            var stillImpactedDeviceIds = await _context.ImpactedDevices
+                .Where(id => impactedDeviceIds.Contains(id.DeviceId))
+                .Select(id => id.DeviceId)
+                .Distinct()
+                .ToListAsync();
+
+            var recoveredDeviceIds = impactedDeviceIds
+                .Where(id => !stillImpactedDeviceIds.Contains(id))
+                .ToHashSet();
+
+            if (recoveredDeviceIds.Count > 0)
+            {
+                var recoveredDevices = await _context.Devices
+                    .Where(d => recoveredDeviceIds.Contains(d.DeviceId) && d.Status == nameof(DeviceStatus.IMPACTED))
+                    .ToListAsync();
+
+                foreach (var recoveredDevice in recoveredDevices)
+                {
+                    recoveredDevice.Status = nameof(DeviceStatus.UP);
+                }
+            }
         }
 
         await _context.SaveChangesAsync();
@@ -89,36 +126,62 @@ public class ImpactAnalysisService : IImpactAnalysisService
 
     public async Task ClearRootCauseAsync(int deviceId)
     {
-        var rootCauseIds = await _context.RootCauses
+        await ClearRootCauseInternalAsync(deviceId);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task<HashSet<int>> ClearRootCauseInternalAsync(int deviceId)
+    {
+        var rootCauses = await _context.RootCauses
             .Where(rc => rc.RootCauseDeviceId == deviceId)
-            .Select(rc => rc.RootCauseId)
             .ToListAsync();
 
-        if (rootCauseIds.Count > 0)
+        if (rootCauses.Count == 0)
         {
-            var impactedRows = await _context.ImpactedDevices
-                .Where(id => rootCauseIds.Contains(id.RootCauseId))
-                .ToListAsync();
-
-            if (impactedRows.Count > 0)
-            {
-                _context.ImpactedDevices.RemoveRange(impactedRows);
-            }
-
-            var rootCauses = await _context.RootCauses
-                .Where(rc => rootCauseIds.Contains(rc.RootCauseId))
-                .ToListAsync();
-
-            _context.RootCauses.RemoveRange(rootCauses);
+            await ClearActiveNodeDownAlarmsAsync(deviceId);
+            return new HashSet<int>();
         }
 
-        await _context.SaveChangesAsync();
+        var rootCauseIds = rootCauses
+            .Select(rc => rc.RootCauseId)
+            .ToHashSet();
+
+        var impactedRows = await _context.ImpactedDevices
+            .Where(id => rootCauseIds.Contains(id.RootCauseId))
+            .ToListAsync();
+
+        var impactedDeviceIds = impactedRows
+            .Select(id => id.DeviceId)
+            .ToHashSet();
+
+        if (impactedRows.Count > 0)
+        {
+            _context.ImpactedDevices.RemoveRange(impactedRows);
+        }
+
+        _context.RootCauses.RemoveRange(rootCauses);
+
+        await ClearActiveNodeDownAlarmsAsync(deviceId);
+        return impactedDeviceIds;
+    }
+
+    private async Task ClearActiveNodeDownAlarmsAsync(int deviceId)
+    {
+        var activeNodeDownAlarms = await _context.Alarms
+            .Where(a => a.DeviceId == deviceId && a.IsActive && a.AlarmType == NodeDownAlarmType)
+            .ToListAsync();
+
+        foreach (var alarm in activeNodeDownAlarms)
+        {
+            alarm.IsActive = false;
+            alarm.ClearedTime = DateTime.UtcNow;
+        }
     }
 
     private async Task<int> EnsureRootCauseAsync(int rootDeviceId)
     {
         var activeAlarm = await _context.Alarms
-            .Where(a => a.DeviceId == rootDeviceId && a.IsActive && a.AlarmType == "NODE_DOWN")
+            .Where(a => a.DeviceId == rootDeviceId && a.IsActive && a.AlarmType == NodeDownAlarmType)
             .OrderByDescending(a => a.RaisedTime)
             .FirstOrDefaultAsync();
 
@@ -127,7 +190,7 @@ public class ImpactAnalysisService : IImpactAnalysisService
             activeAlarm = new Alarm
             {
                 DeviceId = rootDeviceId,
-                AlarmType = "NODE_DOWN",
+                AlarmType = NodeDownAlarmType,
                 RaisedTime = DateTime.UtcNow,
                 IsActive = true
             };
@@ -147,7 +210,7 @@ public class ImpactAnalysisService : IImpactAnalysisService
             {
                 AlarmId = activeAlarm.AlarmId,
                 RootCauseDeviceId = rootDeviceId,
-                RootCauseType = "NODE_FAILURE",
+                RootCauseType = RootCauseNodeFailureType,
                 DetectedTime = DateTime.UtcNow
             };
 
