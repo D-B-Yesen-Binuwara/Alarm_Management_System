@@ -10,9 +10,9 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900">
+      <div className="h-screen flex flex-col bg-gray-50 text-gray-900">
         <Navbar onToggle={() => setCollapsed(p => !p)} />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           <Sidebar collapsed={collapsed} />
           <main className="flex-1 overflow-y-auto p-6">
             <AppRoutes />
