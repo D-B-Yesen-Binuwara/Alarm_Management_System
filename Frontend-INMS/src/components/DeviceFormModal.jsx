@@ -87,7 +87,7 @@ function toPayload(formValues) {
   };
 }
 
-export default function DeviceFormModal({ mode, initialDevice, onClose, onSubmit, submitting }) {
+export default function DeviceFormModal({ mode, initialDevice, onClose, onSubmit, onDelete, submitting, deleting }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitError, setSubmitError] = useState('');
 
@@ -120,6 +120,18 @@ export default function DeviceFormModal({ mode, initialDevice, onClose, onSubmit
       await onSubmit(toPayload(form), form);
     } catch (error) {
       setSubmitError(error?.message ?? 'Unable to save device.');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (mode !== 'edit' || !onDelete || deleting || submitting) {
+      return;
+    }
+
+    try {
+      await onDelete();
+    } catch (error) {
+      setSubmitError(error?.message ?? 'Unable to delete device.');
     }
   };
 
@@ -216,9 +228,20 @@ export default function DeviceFormModal({ mode, initialDevice, onClose, onSubmit
         </div>
 
         <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200 rounded-b-2xl">
+          {mode === 'edit' && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={submitting || deleting}
+              className="mr-auto px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              {deleting ? 'Deleting...' : 'Delete Device'}
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
+            disabled={submitting || deleting}
             className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
           >
             Cancel
@@ -226,7 +249,7 @@ export default function DeviceFormModal({ mode, initialDevice, onClose, onSubmit
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={!isValid || submitting}
+            disabled={!isValid || submitting || deleting}
             className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {submitting ? 'Saving...' : mode === 'add' ? 'Create Device' : 'Update Device'}

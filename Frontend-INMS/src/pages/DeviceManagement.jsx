@@ -57,6 +57,7 @@ export default function DeviceManagement() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loadDevices = async () => {
     setLoading(true);
@@ -110,8 +111,36 @@ export default function DeviceManagement() {
   };
 
   const closeForm = () => {
-    if (!submitting) {
+    if (!submitting && !deleting) {
       setIsFormOpen(false);
+    }
+  };
+
+  const handleDeleteDevice = async () => {
+    if (formMode !== 'edit' || activeDevice?.deviceId == null || deleting) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete device "${activeDevice.deviceName ?? activeDevice.deviceId}"? This action cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleting(true);
+    setError('');
+
+    try {
+      await DeviceService.delete(activeDevice.deviceId);
+      setDevices((previous) => previous.filter((device) => device.deviceId !== activeDevice.deviceId));
+      setIsFormOpen(false);
+      setIsDetailsOpen(false);
+      setActiveDevice(null);
+    } catch (apiError) {
+      const errorMsg = apiError?.response?.data?.message || apiError?.message || 'Failed to delete device.';
+      console.error('Delete device error:', apiError);
+      throw new Error(errorMsg);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -325,7 +354,9 @@ export default function DeviceManagement() {
           initialDevice={formMode === 'edit' ? activeDevice : null}
           onClose={closeForm}
           onSubmit={handleSubmitForm}
+          onDelete={handleDeleteDevice}
           submitting={submitting}
+          deleting={deleting}
         />
       )}
     </div>
