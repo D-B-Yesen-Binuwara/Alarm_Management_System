@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getDeviceTypeLabel } from '../utils/formatters';
+import { getDeviceTypeLabel, normalizeStatus } from '../utils/formatters';
 
 const EMPTY_FORM = {
   deviceName: '',
@@ -45,7 +45,7 @@ function toFormValues(device) {
     deviceName: device.deviceName ?? '',
     deviceType: normalizeType(device.deviceType),
     ip: device.ip ?? '',
-    status: String(device.status ?? 'UP').toUpperCase(),
+    status: normalizeStatus(device.status),
     priorityLevel: String(device.priorityLevel ?? 'Low'),
     leaId: device.leaId ?? '',
     assignedUserId: device.assignedUserId ?? '',
@@ -79,7 +79,7 @@ function toPayload(formValues) {
     deviceName: formValues.deviceName.trim(),
     deviceType: getDeviceTypeEnum(formValues.deviceType),
     ip: formValues.ip.trim(),
-    status: formValues.status,
+    status: normalizeStatus(formValues.status),
     priorityLevel: getPriorityEnum(formValues.priorityLevel),
     leaId: Number(formValues.leaId),
     latitude: Number(formValues.latitude),

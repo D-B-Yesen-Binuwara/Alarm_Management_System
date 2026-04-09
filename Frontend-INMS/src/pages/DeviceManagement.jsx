@@ -95,14 +95,22 @@ export default function DeviceManagement() {
   };
 
   const openEditModal = (device) => {
+    const latestDevice = device?.deviceId != null
+      ? (devicesById.get(device.deviceId) ?? device)
+      : device;
+
     setFormMode('edit');
-    setActiveDevice(device);
+    setActiveDevice(latestDevice);
     setIsDetailsOpen(false);
     setIsFormOpen(true);
   };
 
   const openDetails = (device) => {
-    setActiveDevice(device);
+    const latestDevice = device?.deviceId != null
+      ? (devicesById.get(device.deviceId) ?? device)
+      : device;
+
+    setActiveDevice(latestDevice);
     setIsDetailsOpen(true);
   };
 
@@ -186,11 +194,11 @@ export default function DeviceManagement() {
           };
         }
 
-        // Map status changes to simulation endpoints.
+        // Map explicit status selection to simulation endpoints every time.
+        // This avoids relying on stale local `isSimulatedDown` state after navigation.
         const nextStatus = String(fullFormData?.status ?? '').toUpperCase();
-        const wasSimulatedDown = Boolean(activeDevice?.isSimulatedDown);
 
-        if (nextStatus === 'DOWN' && !wasSimulatedDown) {
+        if (nextStatus === 'DOWN') {
           await DeviceService.simulateFailure(activeDevice.deviceId);
           mergedDevice = {
             ...mergedDevice,
@@ -199,7 +207,7 @@ export default function DeviceManagement() {
           };
         }
 
-        if (nextStatus === 'UP' && wasSimulatedDown) {
+        if (nextStatus === 'UP') {
           await DeviceService.recover(activeDevice.deviceId);
           mergedDevice = {
             ...mergedDevice,
