@@ -42,7 +42,6 @@ export default function DeviceDetailsModal({ device, assignedOperatorName, onClo
           <DetailRow label="Assigned User" value={assignedOperatorName} />
           <DetailRow label="Latitude" value={device.latitude} />
           <DetailRow label="Longitude" value={device.longitude} />
-          <DetailRow label="Is Simulated Down" value={device.isSimulatedDown ? 'Yes' : 'No'} />
         </div>
 
         <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200 rounded-b-2xl">

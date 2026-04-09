@@ -10,8 +10,7 @@ const EMPTY_FORM = {
   leaId: '',
   assignedUserId: '',
   latitude: '',
-  longitude: '',
-  isSimulatedDown: false
+  longitude: ''
 };
 
 const inputCls = 'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10';
@@ -51,23 +50,40 @@ function toFormValues(device) {
     leaId: device.leaId ?? '',
     assignedUserId: device.assignedUserId ?? '',
     latitude: device.latitude ?? '',
-    longitude: device.longitude ?? '',
-    isSimulatedDown: Boolean(device.isSimulatedDown)
+    longitude: device.longitude ?? ''
   };
+}
+
+function getDeviceTypeEnum(typeLabel) {
+  const map = {
+    'SLBN': 0,
+    'CEAN': 1,
+    'MSAN': 2,
+    'Customer': 3
+  };
+  return map[typeLabel] ?? 0;
+}
+
+function getPriorityEnum(priorityLabel) {
+  const map = {
+    'Low': 1,
+    'Avg': 2,
+    'High': 3,
+    'Critical': 4
+  };
+  return map[priorityLabel] ?? 1;
 }
 
 function toPayload(formValues) {
   return {
     deviceName: formValues.deviceName.trim(),
-    deviceType: formValues.deviceType,
+    deviceType: getDeviceTypeEnum(formValues.deviceType),
     ip: formValues.ip.trim(),
     status: formValues.status,
-    priorityLevel: formValues.priorityLevel,
+    priorityLevel: getPriorityEnum(formValues.priorityLevel),
     leaId: Number(formValues.leaId),
-    assignedUserId: formValues.assignedUserId === '' ? null : Number(formValues.assignedUserId),
     latitude: Number(formValues.latitude),
-    longitude: Number(formValues.longitude),
-    isSimulatedDown: Boolean(formValues.isSimulatedDown)
+    longitude: Number(formValues.longitude)
   };
 }
 
@@ -101,7 +117,7 @@ export default function DeviceFormModal({ mode, initialDevice, onClose, onSubmit
     }
 
     try {
-      await onSubmit(toPayload(form));
+      await onSubmit(toPayload(form), form);
     } catch (error) {
       setSubmitError(error?.message ?? 'Unable to save device.');
     }
@@ -158,7 +174,6 @@ export default function DeviceFormModal({ mode, initialDevice, onClose, onSubmit
                 <select value={form.status} onChange={(event) => setField('status', event.target.value)} className={selectCls}>
                   <option value="UP">UP</option>
                   <option value="DOWN">DOWN</option>
-                  <option value="UNREACHABLE">UNREACHABLE</option>
                 </select>
                 <SelectChevron />
               </div>
@@ -185,17 +200,6 @@ export default function DeviceFormModal({ mode, initialDevice, onClose, onSubmit
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Assigned User ID</label>
               <input type="number" value={form.assignedUserId} onChange={(event) => setField('assignedUserId', event.target.value)} className={inputCls} />
-            </div>
-            <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={Boolean(form.isSimulatedDown)}
-                  onChange={(event) => setField('isSimulatedDown', event.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                Is Simulated Down
-              </label>
             </div>
           </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import DeviceService from '../services/DeviceService';
 import DeviceManagementFilter from '../components/DeviceManagementFilter';
 import DeviceCard from '../components/DeviceCard';
+import DeviceGrid from '../components/DeviceGrid';
 import DeviceFormModal from '../components/DeviceFormModal';
 import DeviceDetailsModal from '../components/DeviceDetailsModal';
 import { getDeviceTypeLabel } from '../utils/formatters';
@@ -49,6 +50,7 @@ export default function DeviceManagement() {
 
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('');
+  const [viewMode, setViewMode] = useState('card');
 
   const [activeDevice, setActiveDevice] = useState(null);
   const [formMode, setFormMode] = useState('add');
@@ -113,45 +115,85 @@ export default function DeviceManagement() {
     }
   };
 
-  const handleSubmitForm = async (payload) => {
+  const handleSubmitForm = async (payload, fullFormData) => {
     setSubmitting(true);
+    setError('');
 
     try {
       if (formMode === 'add') {
         const created = await DeviceService.create(payload);
+        let createdDevice = created;
 
-        setDevices((previous) => {
-          const next = Array.isArray(previous) ? [...previous] : [];
-          if (created?.deviceId != null) {
-            const index = next.findIndex((item) => item.deviceId === created.deviceId);
+        if (created?.deviceId != null && fullFormData?.assignedUserId && Number(fullFormData.assignedUserId) > 0) {
+          await DeviceService.assignUser(created.deviceId, Number(fullFormData.assignedUserId));
+          createdDevice = {
+            ...created,
+            assignedUserId: Number(fullFormData.assignedUserId)
+          };
+        }
+
+        if (createdDevice?.deviceId != null) {
+          setDevices((previous) => {
+            const next = Array.isArray(previous) ? [...previous] : [];
+            // Check if device already exists
+            const index = next.findIndex((item) => item.deviceId === createdDevice.deviceId);
             if (index >= 0) {
-              next[index] = created;
+              next[index] = createdDevice;
             } else {
-              next.unshift(created);
+              next.unshift(createdDevice);
             }
             return next;
-          }
-
-          return next;
-        });
+          });
+        }
       } else if (activeDevice?.deviceId != null) {
         const updated = await DeviceService.update(activeDevice.deviceId, payload);
+        let mergedDevice = { ...activeDevice, ...updated, ...payload };
+
+        if (fullFormData?.assignedUserId && Number(fullFormData.assignedUserId) > 0) {
+          await DeviceService.assignUser(activeDevice.deviceId, Number(fullFormData.assignedUserId));
+          mergedDevice = {
+            ...mergedDevice,
+            assignedUserId: Number(fullFormData.assignedUserId)
+          };
+        }
+
+        // Map status changes to simulation endpoints.
+        const nextStatus = String(fullFormData?.status ?? '').toUpperCase();
+        const wasSimulatedDown = Boolean(activeDevice?.isSimulatedDown);
+
+        if (nextStatus === 'DOWN' && !wasSimulatedDown) {
+          await DeviceService.simulateFailure(activeDevice.deviceId);
+          mergedDevice = {
+            ...mergedDevice,
+            status: 'DOWN',
+            isSimulatedDown: true
+          };
+        }
+
+        if (nextStatus === 'UP' && wasSimulatedDown) {
+          await DeviceService.recover(activeDevice.deviceId);
+          mergedDevice = {
+            ...mergedDevice,
+            status: 'UP',
+            isSimulatedDown: false
+          };
+        }
 
         setDevices((previous) => previous.map((device) => (
           device.deviceId === activeDevice.deviceId
-            ? { ...device, ...updated, ...payload }
+            ? { ...device, ...mergedDevice }
             : device
         )));
+
+        // Update the currently displayed details if in edit mode
+        setActiveDevice(mergedDevice);
       }
 
       setIsFormOpen(false);
-
-      if (formMode === 'edit' && activeDevice?.deviceId != null) {
-        const latest = devicesById.get(activeDevice.deviceId);
-        if (latest) {
-          setActiveDevice({ ...latest, ...payload });
-        }
-      }
+    } catch (apiError) {
+      const errorMsg = apiError?.response?.data?.message || apiError?.message || 'Failed to save device.';
+      console.error('Form submission error:', apiError);
+      throw new Error(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -190,6 +232,45 @@ export default function DeviceManagement() {
         onTypeChange={setSelectedType}
       />
 
+      <div className="flex justify-end -mt-2">
+        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            className={`inline-flex items-center justify-center h-8 w-8 rounded-md transition ${
+              viewMode === 'grid'
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+            }`}
+            aria-label="Switch to grid view"
+            title="Grid view"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('card')}
+            className={`inline-flex items-center justify-center h-8 w-8 rounded-md transition ${
+              viewMode === 'card'
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+            }`}
+            aria-label="Switch to card view"
+            title="Card view"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="6" rx="1" />
+              <rect x="3" y="14" width="18" height="6" rx="1" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-20 text-slate-500 bg-white rounded-xl border border-slate-200">
           <svg className="animate-spin h-6 w-6 mr-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -203,17 +284,30 @@ export default function DeviceManagement() {
           No devices match your current filters.
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          {filteredDevices.map((device) => (
-            <DeviceCard
-              key={device.deviceId ?? `${device.deviceName}-${device.ip}`}
-              device={device}
-              assignedOperatorName={getAssignedOperatorName(device)}
+        <>
+          {viewMode === 'card' && (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {filteredDevices.map((device) => (
+                <DeviceCard
+                  key={device.deviceId ?? `${device.deviceName}-${device.ip}`}
+                  device={device}
+                  assignedOperatorName={getAssignedOperatorName(device)}
+                  onView={openDetails}
+                  onEdit={openEditModal}
+                />
+              ))}
+            </div>
+          )}
+
+          {viewMode === 'grid' && (
+            <DeviceGrid
+              devices={filteredDevices}
+              getAssignedOperatorName={getAssignedOperatorName}
               onView={openDetails}
               onEdit={openEditModal}
             />
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {isDetailsOpen && activeDevice && (

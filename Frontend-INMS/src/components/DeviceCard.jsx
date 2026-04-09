@@ -68,7 +68,6 @@ export default function DeviceCard({ device, assignedOperatorName, onView, onEdi
         <DataItem label="Assigned User" value={assignedOperatorName} />
         <DataItem label="Latitude" value={device.latitude} />
         <DataItem label="Longitude" value={device.longitude} />
-        <DataItem label="Simulated Down" value={device.isSimulatedDown ? 'Yes' : 'No'} />
       </div>
 
       <div className="mt-4 flex justify-end">
