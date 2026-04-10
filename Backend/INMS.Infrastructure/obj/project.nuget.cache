@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "DsZHMw+Dkm8=",
+  "dgSpecHash": "hOng9UEeSlk=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj",
+  "projectFilePath": "C:\\Users\\Thulasi\\Desktop\\INMS New\\Alarm_Management_System\\Backend\\INMS.Infrastructure\\INMS.Infrastructure.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Thulasi\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\Thulasi\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

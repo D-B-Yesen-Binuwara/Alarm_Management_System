@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.Domain\\INMS.Domain.csproj": {}
+    "C:\\Users\\Thulasi\\Desktop\\INMS New\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
+    "C:\\Users\\Thulasi\\Desktop\\INMS New\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.Domain\\INMS.Domain.csproj",
+        "projectUniqueName": "C:\\Users\\Thulasi\\Desktop\\INMS New\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj",
         "projectName": "INMS.Domain",
-        "projectPath": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.Domain\\INMS.Domain.csproj",
+        "projectPath": "C:\\Users\\Thulasi\\Desktop\\INMS New\\Alarm_Management_System\\Backend\\INMS.Domain\\INMS.Domain.csproj",
         "packagesPath": "C:\\Users\\Thulasi\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Thulasi\\Desktop\\INMS\\Backend\\INMS.Domain\\obj\\",
+        "outputPath": "C:\\Users\\Thulasi\\Desktop\\INMS New\\Alarm_Management_System\\Backend\\INMS.Domain\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

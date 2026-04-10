@@ -12,6 +12,9 @@ namespace INMS.Application.Interfaces
         Task<Device?> GetByIdAsync(int id);
         Task<Device> CreateAsync(CreateDeviceDto dto);
         Task<Device?> UpdateAsync(int id, UpdateDeviceDto dto);
+        Task PropagateImpact(int rootDeviceId);
+        Task EnsureUnreachableAlarmAsync(int deviceId);
+        Task ClearAlarmsAsync(int deviceId);
         Task<bool> DeleteAsync(int id);
         Task AssignDeviceAsync(int deviceId, int userId);
         Task<List<Device>> GetVisibleDevicesAsync(int userId);
