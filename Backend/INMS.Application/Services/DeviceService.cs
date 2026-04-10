@@ -13,15 +13,18 @@ namespace INMS.Application.Services
         private readonly AppDbContext _context;
         private readonly IDeviceRepository _deviceRepository;
         private readonly IUserAreaAssignmentRepository _assignmentRepository;
+        private readonly ISimulationEventService _simulationEventService;
 
         public DeviceService(
             AppDbContext context,
             IDeviceRepository deviceRepository,
-            IUserAreaAssignmentRepository assignmentRepository)
+            IUserAreaAssignmentRepository assignmentRepository,
+            ISimulationEventService simulationEventService)
         {
             _context = context;
             _deviceRepository = deviceRepository;
             _assignmentRepository = assignmentRepository;
+            _simulationEventService = simulationEventService;
         }
 
         public async Task<IEnumerable<Device>> GetAllAsync()
@@ -240,6 +243,8 @@ namespace INMS.Application.Services
 
                 await _context.Alarms.AddAsync(activeAlarm);
                 await _context.SaveChangesAsync();
+
+                await _simulationEventService.LogAlarmEventAsync(rootDeviceId, "ALARM_RAISED", activeAlarm.AlarmId, activeAlarm.RaisedTime);
             }
 
             var rootCause = await _context.RootCauses
@@ -283,6 +288,8 @@ namespace INMS.Application.Services
 
                 await _context.Alarms.AddAsync(activeAlarm);
                 await _context.SaveChangesAsync();
+
+                await _simulationEventService.LogAlarmEventAsync(deviceId, "ALARM_RAISED", activeAlarm.AlarmId, activeAlarm.RaisedTime);
             }
 
             // For UNREACHABLE, do NOT create a RootCause here. Instead attempt to
@@ -537,6 +544,10 @@ namespace INMS.Application.Services
                     a.ClearedTime = now;
                 }
 
+                await _context.SaveChangesAsync();
+
+                foreach (var a in deviceAlarms)
+                    await _simulationEventService.LogAlarmEventAsync(a.DeviceId, "ALARM_CLEARED", a.AlarmId, a.ClearedTime!.Value);
             }
 
             // Find root causes where this device was the failed root and clear impacted downstream alarms
@@ -564,6 +575,11 @@ namespace INMS.Application.Services
                         a.IsActive = false;
                         a.ClearedTime = now;
                     }
+
+                    await _context.SaveChangesAsync();
+
+                    foreach (var a in impactedAlarms)
+                        await _simulationEventService.LogAlarmEventAsync(a.DeviceId, "ALARM_CLEARED", a.AlarmId, a.ClearedTime!.Value);
                 }
             }
 
