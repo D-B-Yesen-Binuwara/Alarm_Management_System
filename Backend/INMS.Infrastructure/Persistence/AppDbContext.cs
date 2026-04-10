@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<UserAreaAssignment> UserAreaAssignments { get; set; }
     public DbSet<Heartbeat> Heartbeats { get; set; }
     public DbSet<SimulationEvent> SimulationEvents { get; set; }
+    public DbSet<AccountRequest> AccountRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +51,12 @@ public class AppDbContext : DbContext
 
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<Device>()
+            .HasOne(d => d.AssignedUser)
+            .WithMany()
+            .HasForeignKey(d => d.AssignedUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<DeviceLink>()
             .HasOne(dl => dl.ParentDevice)
             .WithMany()
@@ -67,5 +74,6 @@ public class AppDbContext : DbContext
             .HasColumnName("Name");
         modelBuilder.Entity<Heartbeat>().ToTable("Heartbeat");
         modelBuilder.Entity<SimulationEvent>().ToTable("SimulationEvent");
+        modelBuilder.Entity<AccountRequest>().ToTable("AccountRequest");
     }
 }
