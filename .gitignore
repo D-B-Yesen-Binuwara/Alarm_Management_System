@@ -15,6 +15,7 @@ Thumbs.db
 .vs/
 *.user
 *.suo
+.vscode/
 
 # Build folders
 bin/
@@ -31,4 +32,3 @@ CORE_FEATURES_SUMMARY.txt
 IMPLEMENTATION_DOCUMENTATION.txt
 REMOVE_MANUAL_STATUS_UPDATE.txt
 Issues.md
-
