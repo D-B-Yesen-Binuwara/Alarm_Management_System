@@ -1,9 +1,7 @@
 // pages/ImpactAnalysis.jsx
-import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
 import SummaryCard from "../components/SummaryCard";
 import NodeFilterBar from "../components/NodeFilterBar";
-import DeviceService from "../services/DeviceService";
 import {
   getStatusBadgeClass,
   getTypeBadgeClass,
@@ -38,18 +36,7 @@ const MOCK_NODES = [
 const DEFAULT_FILTERS = { search: "", region: "", type: "", status: "" };
 
 export default function ImpactAnalysis() {
-  const [searchParams] = useSearchParams();
-  const [nodeSearch, setNodeSearch] = useState("");
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-
-  useEffect(() => {
-    const deviceId = searchParams.get("deviceId");
-    if (!deviceId) return;
-
-    DeviceService.getById(Number(deviceId)).then((device) => {
-      if (device) setNodeSearch(device.deviceName);
-    }).catch(() => {});
-  }, [searchParams]);
 
   const filtered = MOCK_NODES.filter((n) => {
     const term = filters.search.toLowerCase();
@@ -75,21 +62,15 @@ export default function ImpactAnalysis() {
       </div>
 
       {/* Selector */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-2">
+      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
         <label className="text-sm font-medium text-gray-600">
           Select Source Node
         </label>
         <div className="flex">
-          <input
-            type="text"
-            value={nodeSearch}
-            onChange={(e) => setNodeSearch(e.target.value)}
-            placeholder="Search node by name or IP..."
-            className="border border-gray-300 rounded-l-lg px-3 py-2 text-sm
-            flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <button className="bg-blue-600 hover:bg-blue-700 text-white text-sm
-          font-medium px-4 py-2 rounded-r-lg transition whitespace-nowrap">
+          <select className="border border-gray-300 rounded-l-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option>CEAN-BLR-001 (CEAN — reg3)</option>
+          </select>
+          <button className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-r-lg transition whitespace-nowrap">
             Run Analysis
           </button>
         </div>
