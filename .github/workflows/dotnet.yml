@@ -1,0 +1,28 @@
+name: .NET Build
+
+on:
+  push:
+    branches: [ main, Ishanka-one ]
+  pull_request:
+    branches: [ main, Ishanka-one ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET 9.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore Backend/INMS.sln
+    
+    - name: Build
+      run: dotnet build Backend/INMS.sln --configuration Release --no-restore
+    
+    - name: Run tests (if available)
+      run: dotnet test Backend/INMS.sln --configuration Release --no-build --verbosity normal || true

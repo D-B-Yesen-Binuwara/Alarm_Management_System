@@ -1,3 +1,16 @@
+<<<<<<< Ishanka-one
+IF DB_ID('INMS_SLT') IS NOT NULL
+BEGIN
+    ALTER DATABASE [INMS_SLT] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE [INMS_SLT];
+END;
+GO
+
+CREATE DATABASE [INMS_SLT];
+GO
+USE [INMS_SLT];
+GO
+=======
 /* =========================================================================================
    INMS (Intelligent Network Management System) - Database Schema
    =========================================================================================
@@ -38,6 +51,7 @@
 CREATE DATABASE INMS_SLT;
 USE INMS_SLT;
 DROP DATABASE INM_SLT;
+>>>>>>> main
 
 /* AREA STRUCTURE -------------------------------------------------------- */
 CREATE TABLE Region (
