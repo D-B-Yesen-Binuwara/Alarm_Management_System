@@ -21,17 +21,25 @@ namespace INMS.Domain.Entities
         public string IP { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(20)]
-        public string Status { get; set; } = "UP";
+        public DeviceStatus Status { get; set; } = DeviceStatus.UP;
 
         [Required]
-        [MaxLength(20)]
         public PriorityLevel PriorityLevel { get; set; } = PriorityLevel.Low;
+
+        [Required]
+        [Range(-90, 90, ErrorMessage = "Latitude must be between -90 and 90")]
+        public decimal Latitude { get; set; }
+
+        [Required]
+        [Range(-180, 180, ErrorMessage = "Longitude must be between -180 and 180")]
+        public decimal Longitude { get; set; }
 
         [ForeignKey("LEA")]
         public int LEAId { get; set; }
 
         public int? AssignedUserId { get; set; }
         public User? AssignedUser { get; set; }
+
+        public bool IsSimulatedDown { get; set; } = false;
     }
 }

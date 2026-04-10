@@ -21,7 +21,7 @@ public class UserService : IUserService
 
     public async Task<User> GetById(int id)
     {
-        return await _repository.GetById(id);
+        return (await _repository.GetById(id))!;
     }
 
     public async Task Create(string username, string password, int roleId)
@@ -40,7 +40,7 @@ public class UserService : IUserService
     {
         var user = await _repository.GetById(id);
 
-        user.Username = username;
+        user!.Username = username;
         user.RoleId = roleId;
 
         await _repository.Update(user);

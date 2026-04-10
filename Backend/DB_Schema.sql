@@ -1,3 +1,4 @@
+<<<<<<< Ishanka-one
 IF DB_ID('INMS_SLT') IS NOT NULL
 BEGIN
     ALTER DATABASE [INMS_SLT] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
@@ -9,6 +10,48 @@ CREATE DATABASE [INMS_SLT];
 GO
 USE [INMS_SLT];
 GO
+=======
+/* =========================================================================================
+   INMS (Intelligent Network Management System) - Database Schema
+   =========================================================================================
+   
+   TABLE DESCRIPTIONS & USAGE:
+   
+   [Area Structure]
+   - Region: Represents high-level geographic areas. Used by frontend for map filtering and assignments.
+   - Province: Subdivisions of a Region. Used by frontend for cascading location dropdowns.
+   - LEA (Local Exchange Area): Lowest level geographic unit where devices are physically located. 
+     Used by frontend to group devices and assign precise operational jurisdictions.
+
+   [Users & Access]
+   - Role: Defines permission levels (e.g., Admin, Region Officer). Determines what UI elements are visible.
+   - User: System accounts with authentication details. 
+   - UserAreaAssignment: Links users to specific geographical areas (Region/Province/LEA) so the frontend 
+     can restrict their dashboard and map to only show authorized devices.
+
+   [Devices & Topology]
+   - Device: The primary hardware nodes (SLBN, CEAN, MSAN). Contains coordinates and active status. 
+     Vital for the frontend map rendering and device inventory tables.
+   - DeviceLink: Defines the parent-child relationships between devices. Used by the backend to calculate 
+     downstream impacts, and by the frontend to potentially draw network topology diagrams.
+
+   [Alarms & Monitoring]
+   - Alarm: Current and historical alert states for devices (e.g., NODE_DOWN). Displayed heavily on the 
+     frontend dashboard's active alarm feed and history logs.
+   - RootCause: Pinpoints the specific device responsible for an alarm. Helps frontend users identify 
+     exactly which node to fix when multiple devices go down simultaneously.
+   - ImpactedDevice: Lists all downstream devices affected by a root cause. The frontend uses this to 
+     highlight the "blast radius" of a failure on the map.
+   - Heartbeat: A raw log of ping/status checks for devices over time. Can be used by the frontend to show 
+     uptime statistics or historical availability logs.
+   - SimulationEvent: Audit trail of manually triggered system failures. Used by the frontend to show users 
+     what testing scenarios were executed and when.
+========================================================================================= */
+
+CREATE DATABASE INMS_SLT;
+USE INMS_SLT;
+DROP DATABASE INM_SLT;
+>>>>>>> main
 
 /* AREA STRUCTURE -------------------------------------------------------- */
 CREATE TABLE Region (
@@ -64,7 +107,7 @@ CREATE TABLE Device (
     DeviceName NVARCHAR(150) NOT NULL,
     DeviceType NVARCHAR(50) NOT NULL,  -- SLBN | CEAN | MSAN | CUSTOMER
     IP NVARCHAR(50),
-    Status NVARCHAR(20) NOT NULL DEFAULT 'UP', -- UP | DOWN | IMPACTED
+    Status NVARCHAR(20) NOT NULL DEFAULT 'UP', -- UP | DOWN | UNREACHABLE
     PriorityLevel NVARCHAR(20) NOT NULL DEFAULT 'LOW', -- LOW | AVERAGE | HIGH | CRITICAL
     LEAId INT NOT NULL,
     AssignedUserId INT NULL,
@@ -75,6 +118,10 @@ CREATE TABLE Device (
     CONSTRAINT FK_Device_User
         FOREIGN KEY (AssignedUserId) REFERENCES [User](UserId)
 );
+
+ALTER TABLE Device
+ADD Latitude DECIMAL(9,6) NULL,
+    Longitude DECIMAL(9,6) NULL;
 
 /* TOPOLOGY LINKS --------------------------------------------------------------------- */
 CREATE TABLE DeviceLink (
@@ -171,6 +218,10 @@ ALTER TABLE Region ADD Description NVARCHAR(255) NULL;
 -- Rename Role column
 EXEC sp_rename 'Role.RoleName', 'Name', 'COLUMN';
 
+-- Add ServiceId and Email columns to User table
+ALTER TABLE [User] ADD ServiceId NVARCHAR(50) NULL;
+ALTER TABLE [User] ADD Email NVARCHAR(150) NULL;
+
 /*------------------------------------------------*/
 USE INMS_SLT;
 
@@ -241,3 +292,122 @@ SELECT * FROM Province;
 SELECT * FROM LEA;
 SELECT * FROM Device;
 SELECT * FROM DeviceLink;
+
+ALTER TABLE Device
+ADD Latitude DECIMAL(9,6) NULL,
+    Longitude DECIMAL(9,6) NULL;
+
+UPDATE Device
+SET Latitude = 0.0 
+WHERE Latitude IS NULL;
+
+UPDATE Device
+SET Longitude = 0.0 
+WHERE Longitude IS NULL;
+
+-- Then alter the columns to NOT NULL
+ALTER TABLE Device
+ALTER COLUMN Latitude DECIMAL(9,6) NOT NULL;
+
+ALTER TABLE Device
+ALTER COLUMN Longitude DECIMAL(9,6) NOT NULL;
+
+ALTER TABLE Device ADD IsSimulatedDown BIT NOT NULL DEFAULT 0;
+
+
+-- Sample Data ------------------------------------
+-- SLBN - Colombo
+UPDATE Device SET Latitude = 6.9271, Longitude = 79.8612 WHERE DeviceId = 1;
+
+-- SLBN - Gampaha
+UPDATE Device SET Latitude = 7.0917, Longitude = 79.9992 WHERE DeviceId = 2;
+
+-- CEAN - Colombo Central (slight offset)
+UPDATE Device SET Latitude = 6.9300, Longitude = 79.8650 WHERE DeviceId = 3;
+
+-- CEAN - Colombo North
+UPDATE Device SET Latitude = 6.9500, Longitude = 79.8700 WHERE DeviceId = 4;
+
+-- CEAN - Gampaha
+UPDATE Device SET Latitude = 7.0950, Longitude = 80.0020 WHERE DeviceId = 5;
+
+-- MSAN - Colombo A1 
+UPDATE Device SET Latitude = 6.9285, Longitude = 79.8625 WHERE DeviceId = 6;
+
+-- MSAN - Colombo A2
+UPDATE Device SET Latitude = 6.9260, Longitude = 79.8595 WHERE DeviceId = 7;
+
+-- MSAN - Gampaha A1
+UPDATE Device SET Latitude = 7.0925, Longitude = 79.9975 WHERE DeviceId = 8;
+
+
+---- || TEST SCENARIO FOR MAP || ----
+
+-- Reset
+DELETE FROM ImpactedDevice;
+DELETE FROM RootCause;
+DELETE FROM Alarm;
+
+UPDATE Device
+SET Status = 'UP';
+
+
+-- Step 1: Root failure
+UPDATE Device
+SET Status = 'DOWN'
+WHERE DeviceName = 'SLBN-Colombo-01';
+
+
+-- Step 2: Insert Alarm (FIXED)
+INSERT INTO Alarm (DeviceId, AlarmType)
+VALUES (
+    (SELECT DeviceId FROM Device WHERE DeviceName = 'SLBN-Colombo-01'),
+    'SIMULATION'
+);
+
+
+-- Step 3: Insert RootCause (NOW AlarmId will exist)
+INSERT INTO RootCause (AlarmId, RootCauseDeviceId, RootCauseType, DetectedTime)
+VALUES (
+    (SELECT TOP 1 AlarmId FROM Alarm ORDER BY AlarmId DESC),
+    (SELECT DeviceId FROM Device WHERE DeviceName = 'SLBN-Colombo-01'),
+    'SIMULATION',
+    GETDATE()
+);
+
+
+-- Step 4: Insert Impacted Devices
+INSERT INTO ImpactedDevice (DeviceId, RootCauseId, ImpactType)
+SELECT DeviceId,
+       (SELECT TOP 1 RootCauseId FROM RootCause ORDER BY RootCauseId DESC),
+       'DOWNSTREAM'  -- or 'IMPACTED'
+FROM Device
+WHERE DeviceName IN (
+    'CEAN-Colombo-Central-01',
+    'CEAN-Colombo-North-01',
+    'MSAN-Colombo-A1',
+    'MSAN-Colombo-A2'
+);
+
+-- Add ServiceId and Email columns to User table
+ALTER TABLE [User] ADD ServiceId NVARCHAR(50) NULL;
+ALTER TABLE [User] ADD Email NVARCHAR(150) NULL;
+
+/* ACCOUNT REQUESTS ------------------------------------------------------------------ */
+CREATE TABLE AccountRequest (
+    RequestId    INT IDENTITY(1,1) PRIMARY KEY,
+    FullName     NVARCHAR(150)  NOT NULL,
+    Email        NVARCHAR(150)  NOT NULL,
+    ServiceId    NVARCHAR(50)   NOT NULL,
+    RoleId       INT            NOT NULL,
+    RegionId     INT            NOT NULL,
+    ProvinceId   INT            NULL,
+    LEAId        INT            NULL,
+    RequestedAt  DATETIME       NOT NULL DEFAULT GETDATE(),
+    Status       NVARCHAR(20)   NOT NULL DEFAULT 'PENDING', -- PENDING | APPROVED | REJECTED
+
+    CONSTRAINT FK_AccountRequest_Role     FOREIGN KEY (RoleId)     REFERENCES Role(RoleId),
+    CONSTRAINT FK_AccountRequest_Region   FOREIGN KEY (RegionId)   REFERENCES Region(RegionId),
+    CONSTRAINT FK_AccountRequest_Province FOREIGN KEY (ProvinceId) REFERENCES Province(ProvinceId),
+    CONSTRAINT FK_AccountRequest_LEA      FOREIGN KEY (LEAId)      REFERENCES LEA(LEAId)
+);
