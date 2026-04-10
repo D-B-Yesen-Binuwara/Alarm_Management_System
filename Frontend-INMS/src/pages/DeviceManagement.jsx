@@ -5,7 +5,7 @@ import DeviceCard from '../components/DeviceCard';
 import DeviceGrid from '../components/DeviceGrid';
 import DeviceFormModal from '../components/DeviceFormModal';
 import DeviceDetailsModal from '../components/DeviceDetailsModal';
-import { getDeviceTypeLabel } from '../utils/formatters';
+import { getDeviceTypeLabel, normalizeStatus } from '../utils/formatters';
 
 function getAssignedOperatorName(device) {
   return device.assignedUserFullName || (device.assignedUserId != null ? `User #${device.assignedUserId}` : '-');
@@ -14,10 +14,12 @@ function getAssignedOperatorName(device) {
 function matchesSearch(device, searchTerm) {
   if (!searchTerm) return true;
   const term = searchTerm.toLowerCase();
+  const assignedServiceId = String(device.assignedUserServiceId ?? '').toLowerCase();
   return (
     String(device.ip ?? '').toLowerCase().includes(term)
     || String(device.deviceName ?? '').toLowerCase().includes(term)
-    || getAssignedOperatorName(device).toLowerCase().includes(term)
+    || String(device.assignedUserFullName ?? '').toLowerCase().includes(term)
+    || assignedServiceId.includes(term)
   );
 }
 
@@ -37,7 +39,9 @@ export default function DeviceManagement() {
   const [error, setError] = useState('');
 
   const [search, setSearch] = useState('');
-  const [selectedType, setSelectedType] = useState('');
+  const [selectedType, setSelectedType] = useState('All');
+  const [selectedUser, setSelectedUser] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('All');
   const [viewMode, setViewMode] = useState('card');
 
   const [activeDevice, setActiveDevice] = useState(null);
@@ -71,10 +75,13 @@ export default function DeviceManagement() {
   const filteredDevices = useMemo(() => {
     return devices.filter((device) => {
       const typeLabel = getDeviceTypeLabel(device.deviceType);
-      const matchesType = !selectedType || typeLabel === selectedType;
-      return matchesType && matchesSearch(device, search);
+      const matchesType = selectedType === 'All' || typeLabel === selectedType;
+      const matchesUser = selectedUser === 'All' || String(device.assignedUserId ?? '') === selectedUser;
+      const statusLabel = normalizeStatus(device.status);
+      const matchesStatus = selectedStatus === 'All' || statusLabel === selectedStatus;
+      return matchesType && matchesUser && matchesStatus && matchesSearch(device, search);
     });
-  }, [devices, search, selectedType]);
+  }, [devices, search, selectedType, selectedUser, selectedStatus]);
 
   const openAddModal = () => {
     setFormMode('add');
@@ -256,16 +263,19 @@ export default function DeviceManagement() {
       <DeviceManagementFilter
         search={search}
         selectedType={selectedType}
+        selectedUser={selectedUser}
+        selectedStatus={selectedStatus}
         onSearchChange={setSearch}
         onTypeChange={setSelectedType}
+        onUserChange={setSelectedUser}
+        onStatusChange={setSelectedStatus}
       />
-
-      <div className="flex justify-end -mt-2">
-        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+      <div className="flex justify-end -mt-0 -mb-0">
+        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0 shadow-sm">
           <button
             type="button"
             onClick={() => setViewMode('grid')}
-            className={`inline-flex items-center justify-center h-8 w-8 rounded-md transition ${
+            className={`inline-flex items-center justify-center h-7 w-7 rounded-md transition ${
               viewMode === 'grid'
                 ? 'bg-indigo-600 text-white'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
@@ -283,7 +293,7 @@ export default function DeviceManagement() {
           <button
             type="button"
             onClick={() => setViewMode('card')}
-            className={`inline-flex items-center justify-center h-8 w-8 rounded-md transition ${
+            className={`inline-flex items-center justify-center h-6 w-6 rounded-md transition ${
               viewMode === 'card'
                 ? 'bg-indigo-600 text-white'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
@@ -291,7 +301,7 @@ export default function DeviceManagement() {
             aria-label="Switch to card view"
             title="Card view"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
               <rect x="3" y="4" width="18" height="6" rx="1" />
               <rect x="3" y="14" width="18" height="6" rx="1" />
             </svg>
