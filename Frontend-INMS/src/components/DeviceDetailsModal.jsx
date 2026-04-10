@@ -39,7 +39,14 @@ export default function DeviceDetailsModal({ device, assignedOperatorName, onClo
           <DetailRow label="Status" value={normalizeStatus(device.status)} />
           <DetailRow label="Priority Level" value={getPriorityLabel(device.priorityLevel)} />
           <DetailRow label="LEA ID" value={device.leaId} />
-          <DetailRow label="Assigned User" value={assignedOperatorName} />
+          <DetailRow label="Assigned User" value={
+            <span className="flex items-center gap-2">
+              {assignedOperatorName}
+              {device.assignedUserServiceId && (
+                <span className="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{device.assignedUserServiceId}</span>
+              )}
+            </span>
+          } />
           <DetailRow label="Latitude" value={device.latitude} />
           <DetailRow label="Longitude" value={device.longitude} />
         </div>

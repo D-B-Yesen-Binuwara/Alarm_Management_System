@@ -8,28 +8,16 @@ import DeviceDetailsModal from '../components/DeviceDetailsModal';
 import { getDeviceTypeLabel } from '../utils/formatters';
 
 function getAssignedOperatorName(device) {
-  return (
-    device.assignedUserName
-    ?? device.operatorName
-    ?? device.assignedOperator
-    ?? device.userName
-    ?? (device.assignedUserId != null ? `User #${device.assignedUserId}` : '-')
-  );
+  return device.assignedUserFullName || (device.assignedUserId != null ? `User #${device.assignedUserId}` : '-');
 }
 
 function matchesSearch(device, searchTerm) {
-  if (!searchTerm) {
-    return true;
-  }
-
+  if (!searchTerm) return true;
   const term = searchTerm.toLowerCase();
-  const assignedOperator = getAssignedOperatorName(device).toLowerCase();
-
   return (
     String(device.ip ?? '').toLowerCase().includes(term)
     || String(device.deviceName ?? '').toLowerCase().includes(term)
-    || String(device.assignedUserId ?? '').toLowerCase().includes(term)
-    || assignedOperator.includes(term)
+    || getAssignedOperatorName(device).toLowerCase().includes(term)
   );
 }
 
@@ -188,11 +176,14 @@ export default function DeviceManagement() {
 
         if (fullFormData?.assignedUserId && Number(fullFormData.assignedUserId) > 0) {
           await DeviceService.assignUser(activeDevice.deviceId, Number(fullFormData.assignedUserId));
-          mergedDevice = {
-            ...mergedDevice,
-            assignedUserId: Number(fullFormData.assignedUserId)
-          };
         }
+
+        // Reload to get assignedUserFullName from backend
+        const refreshed = await DeviceService.getAll();
+        const refreshedDevice = Array.isArray(refreshed)
+          ? refreshed.find((d) => d.deviceId === activeDevice.deviceId)
+          : null;
+        mergedDevice = refreshedDevice ? { ...mergedDevice, ...refreshedDevice } : mergedDevice;
 
         // Map explicit status selection to simulation endpoints every time.
         // This avoids relying on stale local `isSimulatedDown` state after navigation.

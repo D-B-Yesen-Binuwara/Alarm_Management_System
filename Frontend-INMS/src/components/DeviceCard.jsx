@@ -65,7 +65,15 @@ export default function DeviceCard({ device, assignedOperatorName, onView, onEdi
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         <DataItem label="IP" value={device.ip} mono />
         <DataItem label="LEA ID" value={device.leaId} />
-        <DataItem label="Assigned User" value={assignedOperatorName} />
+        <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+          <p className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Assigned User</p>
+          <div className="mt-1 flex items-center gap-2">
+            {device.assignedUserServiceId && (
+              <span className="text-xs font-mono text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">{device.assignedUserServiceId}</span>
+            )}
+            <p className="text-sm text-slate-800">{assignedOperatorName}</p>
+          </div>
+        </div>
         <DataItem label="Latitude" value={device.latitude} />
         <DataItem label="Longitude" value={device.longitude} />
       </div>

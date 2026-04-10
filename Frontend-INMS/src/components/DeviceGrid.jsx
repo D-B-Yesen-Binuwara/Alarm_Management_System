@@ -47,7 +47,14 @@ export default function DeviceGrid({ devices, getAssignedOperatorName, onView, o
                   </span>
                 </td>
                 <td className="py-2.5 px-3 text-gray-600">{device.leaId ?? '-'}</td>
-                <td className="py-2.5 px-3 text-gray-600">{getAssignedOperatorName(device)}</td>
+                <td className="py-2.5 px-3">
+                  <div className="flex items-center gap-2">
+                    {device.assignedUserServiceId && (
+                      <span className="text-xs font-mono text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">{device.assignedUserServiceId}</span>
+                    )}
+                    <span className="text-gray-600">{getAssignedOperatorName(device)}</span>
+                  </div>
+                </td>
                 <td className="py-2.5 px-3 text-gray-600">{device.latitude ?? '-'}</td>
                 <td className="py-2.5 px-3 text-gray-600">{device.longitude ?? '-'}</td>
                 <td className="py-2.5 px-3">
