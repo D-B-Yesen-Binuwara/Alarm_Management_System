@@ -44,21 +44,30 @@ namespace INMS.Application.Services
                 .Join(_context.Regions.AsNoTracking(),
                     dlp => dlp.Province.RegionId,
                     r => r.RegionId,
-                    (dlp, r) => new DeviceListDto(
-                        dlp.Device.DeviceId,
-                        dlp.Device.DeviceName,
-                        dlp.Device.DeviceType,
-                        dlp.Device.IP,
-                        dlp.Device.Status,
-                        dlp.Device.PriorityLevel,
-                        dlp.Device.LEAId,
-                        dlp.Lea.Name,
-                        dlp.Province.Name,
-                        r.Name,
-                        dlp.Device.Latitude,
-                        dlp.Device.Longitude,
-                        dlp.Device.AssignedUserId,
-                        dlp.Device.IsSimulatedDown
+                    (dlp, r) => new { dlp.Device, dlp.Lea, dlp.Province, Region = r })
+                .GroupJoin(_context.Users.AsNoTracking(),
+                    dlpr => dlpr.Device.AssignedUserId,
+                    u => u.UserId,
+                    (dlpr, users) => new { dlpr.Device, dlpr.Lea, dlpr.Province, dlpr.Region, Users = users })
+                .SelectMany(
+                    x => x.Users.DefaultIfEmpty(),
+                    (x, u) => new DeviceListDto(
+                        x.Device.DeviceId,
+                        x.Device.DeviceName,
+                        x.Device.DeviceType,
+                        x.Device.IP,
+                        x.Device.Status,
+                        x.Device.PriorityLevel,
+                        x.Device.LEAId,
+                        x.Lea.Name,
+                        x.Province.Name,
+                        x.Region.Name,
+                        x.Device.Latitude,
+                        x.Device.Longitude,
+                        x.Device.AssignedUserId,
+                        u != null ? u.FullName : null,
+                        u != null ? u.ServiceId : null,
+                        x.Device.IsSimulatedDown
                     ))
                 .ToListAsync();
 
@@ -476,14 +485,14 @@ namespace INMS.Application.Services
 
         public async Task AssignDeviceAsync(int deviceId, int userId)
         {
-            var device = await _deviceRepository.GetByIdAsync(deviceId);
+            var device = await _context.Devices.FindAsync(deviceId);
             if (device == null) throw new Exception("Device not found");
 
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null) throw new Exception("User not found");
+            var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
+            if (!userExists) throw new Exception("User not found");
 
             device.AssignedUserId = userId;
-            await _deviceRepository.UpdateAsync(device);
+            await _context.SaveChangesAsync();
         }
 
         public async Task<List<Device>> GetVisibleDevicesAsync(int userId)

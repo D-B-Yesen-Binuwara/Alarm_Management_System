@@ -51,6 +51,12 @@ public class AppDbContext : DbContext
 
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<Device>()
+            .HasOne(d => d.AssignedUser)
+            .WithMany()
+            .HasForeignKey(d => d.AssignedUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<DeviceLink>()
             .HasOne(dl => dl.ParentDevice)
             .WithMany()
