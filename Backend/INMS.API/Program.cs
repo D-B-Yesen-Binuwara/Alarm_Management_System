@@ -41,9 +41,7 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAreaAssignmentRepository, UserAreaAssignmentRepository>();
 builder.Services.AddScoped<UserAreaAssignmentService>();
-<<<<<<< Ishanka-one
 builder.Services.AddScoped<IImpactAnalysisService, ImpactAnalysisService>();
-=======
 
 
 builder.Services.AddScoped<IAlarmRepository, AlarmRepository>();
@@ -59,7 +57,6 @@ builder.Services.AddScoped<ISimulationEventService, SimulationEventService>();
 builder.Services.AddHostedService<HeartbeatSchedulerService>();
 builder.Services.AddHostedService<HeartbeatFailureDetectionService>();
 
->>>>>>> main
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -84,11 +81,3 @@ app.MapControllers();
 
 app.Run();
 
-<<<<<<< Ishanka-one
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
-
-=======
->>>>>>> main

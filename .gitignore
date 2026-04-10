@@ -30,7 +30,6 @@ project.assets.json
 
 # Logs
 *.log
-<<<<<<< Ishanka-one
 ALARM_CRUD_CHANGES.txt
 AUTOMATED_HEARTBEAT_MONITORING_SYSTEM.txt
 Understand.txt
@@ -38,7 +37,6 @@ HEARTBEAT_MONITORING_SYSTEM_CORRECTIONS.txt
 DEVICE_TOPOLOGY_IMPLEMENTATION.txt
 
 .fake
-=======
 
 bin/
 obj/
@@ -49,4 +47,3 @@ IMPLEMENTATION_DOCUMENTATION.txt
 REMOVE_MANUAL_STATUS_UPDATE.txt
 Issues.md
 
->>>>>>> main
