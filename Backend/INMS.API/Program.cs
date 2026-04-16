@@ -52,6 +52,10 @@ builder.Services.AddScoped<IHeartbeatService, HeartbeatService>();
 builder.Services.AddScoped<ISimulationEventRepository, SimulationEventRepository>();
 builder.Services.AddScoped<ISimulationEventService, SimulationEventService>();
 
+// Vendor Services
+builder.Services.AddScoped<IVendorRepository, VendorRepository>();
+builder.Services.AddScoped<IVendorService, VendorService>();
+
 // Background Services
 builder.Services.AddHostedService<HeartbeatSchedulerService>();
 builder.Services.AddHostedService<HeartbeatFailureDetectionService>();
