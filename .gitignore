@@ -32,3 +32,5 @@ IMPLEMENTATION_DOCUMENTATION.txt
 REMOVE_MANUAL_STATUS_UPDATE.txt
 Issues.md
 
+appsettings.Development.json
+appsettings.json
