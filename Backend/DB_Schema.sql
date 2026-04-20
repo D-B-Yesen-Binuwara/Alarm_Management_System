@@ -411,3 +411,30 @@ CREATE TABLE AccountRequest (
     CONSTRAINT FK_AccountRequest_Province FOREIGN KEY (ProvinceId) REFERENCES Province(ProvinceId),
     CONSTRAINT FK_AccountRequest_LEA      FOREIGN KEY (LEAId)      REFERENCES LEA(LEAId)
 );
+
+/* 1. Add Geographical Columns to the User Table */
+ALTER TABLE [User] 
+ADD RegionId INT NULL,
+    ProvinceId INT NULL,
+    LEAId INT NULL;
+
+/* 2. Establish Foreign Key Constraints */
+-- Links User to the Region table
+ALTER TABLE [User]
+ADD CONSTRAINT FK_User_Region
+FOREIGN KEY (RegionId) REFERENCES Region(RegionId);
+
+-- Links User to the Province table
+ALTER TABLE [User]
+ADD CONSTRAINT FK_User_Province
+FOREIGN KEY (ProvinceId) REFERENCES Province(ProvinceId);
+
+-- Links User to the LEA table
+ALTER TABLE [User]
+ADD CONSTRAINT FK_User_LEA
+FOREIGN KEY (LEAId) REFERENCES LEA(LEAId);
+
+/* 3. Verify the changes */
+SELECT COLUMN_NAME, DATA_TYPE 
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_NAME = 'User';
