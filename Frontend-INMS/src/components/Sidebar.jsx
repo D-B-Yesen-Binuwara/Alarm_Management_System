@@ -35,11 +35,26 @@ export default function Sidebar({ collapsed }) {
           <NavLink to="/impact-analysis" collapsed={collapsed} label="Impact Analysis">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </NavLink>
+          <NavLink to="/correlation" collapsed={collapsed} label="Correlation">
+            <circle cx="12" cy="8" r="2" />
+            <circle cx="6" cy="16" r="2" />
+            <circle cx="18" cy="16" r="2" />
+            <path d="M10.4 9.2 7.6 14.8" />
+            <path d="M13.6 9.2l2.8 5.6" />
+            <path d="M8 16h8" />
+          </NavLink>
           <NavLink to="/events" collapsed={collapsed} label="Event Logs">
             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
           </NavLink>
           <NavLink to="/device-management" collapsed={collapsed} label="Device Management">
             <rect x="2" y="4" width="20" height="8" rx="2" /><rect x="2" y="12" width="20" height="8" rx="2" /><line x1="6" y1="8" x2="6.01" y2="8" /><line x1="6" y1="16" x2="6.01" y2="16" /><line x1="10" y1="8" x2="18" y2="8" /><line x1="10" y1="16" x2="18" y2="16" />
+          </NavLink>
+          <NavLink to="/vendors" collapsed={collapsed} label="Vendor Management">
+            <path d="M3 21h18" />
+            <path d="M5 21V7l7-4 7 4v14" />
+            <path d="M9 9h6" />
+            <path d="M9 13h6" />
+            <path d="M9 17h6" />
           </NavLink>
           <NavLink to="/user-management" collapsed={collapsed} label="User Management">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
