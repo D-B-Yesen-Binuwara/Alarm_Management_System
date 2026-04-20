@@ -438,3 +438,7 @@ FOREIGN KEY (LEAId) REFERENCES LEA(LEAId);
 SELECT COLUMN_NAME, DATA_TYPE 
 FROM INFORMATION_SCHEMA.COLUMNS 
 WHERE TABLE_NAME = 'User';
+
+/*Add Alarm Id To Simulate Event --------------------------------------------- */
+ALTER TABLE SimulationEvent
+ADD AlarmId INT NULL;

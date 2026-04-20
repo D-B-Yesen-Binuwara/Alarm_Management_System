@@ -1,4 +1,3 @@
-<<<<<<< Ishanka-one
 # Alarm_Management_System
 
 Web-based system to model and simulate fault detection, alarm handling, and impact analysis in a telecom network hierarchy.
@@ -105,4 +104,3 @@ npm start
 
 Use feature branches like `YB/DTO/F2` to keep work isolated. Merge only after code review and tests pass.
 
->>>>>>> main
