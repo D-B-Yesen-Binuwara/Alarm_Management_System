@@ -25,7 +25,7 @@ namespace INMS.Domain.Entities
 
         public bool IsActive { get; set; } = true;
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; }
 
         // Navigation properties
         public ICollection<Device> Devices { get; set; } = new List<Device>();

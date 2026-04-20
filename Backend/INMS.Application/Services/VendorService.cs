@@ -15,36 +15,50 @@ public class VendorService : IVendorService
         _vendorRepository = vendorRepository;
     }
 
-    public async Task<IEnumerable<Vendor>> GetAllAsync()
+    public async Task<IEnumerable<VendorDto>> GetAllAsync()
     {
-        return await _vendorRepository.GetAllAsync();
+        var vendors = await _vendorRepository.GetAllWithDevicesAsync();
+        return vendors.Select(MapToDto);
     }
 
-    public async Task<Vendor?> GetByIdAsync(int id)
+    public async Task<VendorDto?> GetByIdAsync(int id)
     {
-        return await _vendorRepository.GetByIdAsync(id);
+        var vendor = await _vendorRepository.GetByIdWithDevicesAsync(id);
+        return vendor != null ? MapToDto(vendor) : null;
     }
 
-    public async Task<Vendor> CreateAsync(CreateVendorDto dto)
+    public async Task<VendorDto> CreateAsync(CreateVendorDto dto)
     {
+        // Check for duplicates
+        if (await _vendorRepository.ExistsAsync(dto.Name, dto.Brand, dto.DeviceType))
+        {
+            throw new InvalidOperationException($"Vendor with name '{dto.Name}', brand '{dto.Brand}', and device type '{dto.DeviceType}' already exists.");
+        }
+
         var vendor = new Vendor
         {
             Name = dto.Name,
             Brand = dto.Brand,
             DeviceType = dto.DeviceType,
             Description = dto.Description,
-            CreatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
 
         await _vendorRepository.AddAsync(vendor);
-        return vendor;
+        return MapToDto(vendor);
     }
 
-    public async Task<Vendor?> UpdateAsync(int id, UpdateVendorDto dto)
+    public async Task<VendorDto?> UpdateAsync(int id, UpdateVendorDto dto)
     {
         var vendor = await _vendorRepository.GetByIdAsync(id);
         if (vendor == null) return null;
+
+        // Check for duplicates (excluding current vendor)
+        if (await _vendorRepository.ExistsAsync(dto.Name, dto.Brand, dto.DeviceType, id))
+        {
+            throw new InvalidOperationException($"Vendor with name '{dto.Name}', brand '{dto.Brand}', and device type '{dto.DeviceType}' already exists.");
+        }
 
         vendor.Name = dto.Name;
         vendor.Brand = dto.Brand;
@@ -53,7 +67,7 @@ public class VendorService : IVendorService
         vendor.IsActive = dto.IsActive;
 
         await _vendorRepository.UpdateAsync(vendor);
-        return vendor;
+        return MapToDto(vendor);
     }
 
     public async Task<bool> DeleteAsync(int id)
@@ -65,13 +79,29 @@ public class VendorService : IVendorService
         return true;
     }
 
-    public async Task<IEnumerable<Vendor>> GetByDeviceTypeAsync(DeviceType deviceType)
+    public async Task<IEnumerable<VendorDto>> GetByDeviceTypeAsync(DeviceType deviceType)
     {
-        return await _vendorRepository.GetByDeviceTypeAsync(deviceType);
+        var vendors = await _vendorRepository.GetByDeviceTypeAsync(deviceType);
+        return vendors.Select(MapToDto);
     }
 
-    public async Task<IEnumerable<Vendor>> GetByBrandAsync(string brand)
+    public async Task<IEnumerable<VendorDto>> GetByBrandAsync(string brand)
     {
-        return await _vendorRepository.GetByBrandAsync(brand);
+        var vendors = await _vendorRepository.GetByBrandAsync(brand);
+        return vendors.Select(MapToDto);
+    }
+
+    private static VendorDto MapToDto(Vendor vendor)
+    {
+        return new VendorDto(
+            vendor.VendorId,
+            vendor.Name,
+            vendor.Brand,
+            vendor.DeviceType,
+            vendor.Description,
+            vendor.IsActive,
+            vendor.CreatedAt,
+            vendor.Devices?.Count ?? 0
+        );
     }
 }

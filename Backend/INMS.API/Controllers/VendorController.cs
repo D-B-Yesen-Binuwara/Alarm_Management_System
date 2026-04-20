@@ -53,17 +53,37 @@ namespace INMS.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateVendorDto dto)
         {
-            var created = await _vendorService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.VendorId }, created);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+                
+            try
+            {
+                var created = await _vendorService.CreateAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = created.VendorId }, created);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         // Update vendor
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateVendorDto dto)
         {
-            var updated = await _vendorService.UpdateAsync(id, dto);
-            if (updated == null) return NotFound();
-            return Ok(updated);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+                
+            try
+            {
+                var updated = await _vendorService.UpdateAsync(id, dto);
+                if (updated == null) return NotFound();
+                return Ok(updated);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         // Delete vendor

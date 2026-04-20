@@ -18,11 +18,22 @@ public class VendorRepository : IVendorRepository
     public async Task<Vendor?> GetByIdAsync(int id)
     {
         return await _context.Vendors
+            .FirstOrDefaultAsync(v => v.VendorId == id);
+    }
+
+    public async Task<Vendor?> GetByIdWithDevicesAsync(int id)
+    {
+        return await _context.Vendors
             .Include(v => v.Devices)
             .FirstOrDefaultAsync(v => v.VendorId == id);
     }
 
     public async Task<List<Vendor>> GetAllAsync()
+    {
+        return await _context.Vendors.ToListAsync();
+    }
+
+    public async Task<List<Vendor>> GetAllWithDevicesAsync()
     {
         return await _context.Vendors
             .Include(v => v.Devices)
@@ -33,7 +44,6 @@ public class VendorRepository : IVendorRepository
     {
         return await _context.Vendors
             .Where(v => v.DeviceType == deviceType)
-            .Include(v => v.Devices)
             .ToListAsync();
     }
 
@@ -41,7 +51,6 @@ public class VendorRepository : IVendorRepository
     {
         return await _context.Vendors
             .Where(v => v.Brand == brand)
-            .Include(v => v.Devices)
             .ToListAsync();
     }
 
@@ -61,5 +70,16 @@ public class VendorRepository : IVendorRepository
     {
         _context.Vendors.Remove(vendor);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool> ExistsAsync(string name, string brand, DeviceType deviceType, int? excludeId = null)
+    {
+        var query = _context.Vendors
+            .Where(v => v.Name == name && v.Brand == brand && v.DeviceType == deviceType);
+        
+        if (excludeId.HasValue)
+            query = query.Where(v => v.VendorId != excludeId.Value);
+            
+        return await query.AnyAsync();
     }
 }
