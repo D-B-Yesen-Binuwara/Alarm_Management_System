@@ -411,3 +411,9 @@ CREATE TABLE AccountRequest (
     CONSTRAINT FK_AccountRequest_Province FOREIGN KEY (ProvinceId) REFERENCES Province(ProvinceId),
     CONSTRAINT FK_AccountRequest_LEA      FOREIGN KEY (LEAId)      REFERENCES LEA(LEAId)
 );
+
+
+
+/*Add Alarm Id To Simulate Event --------------------------------------------- */
+ALTER TABLE SimulationEvent
+ADD AlarmId INT NULL;
