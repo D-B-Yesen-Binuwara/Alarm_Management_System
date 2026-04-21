@@ -10,6 +10,7 @@ import CorrelationPage from '../pages/CorrelationPage';
 import VendorsPage from '../pages/Vendors/VendorsPage';
 import Register from '../pages/Register';
 import Login from '../pages/Login';
+import EventPage from '../pages/EventPage';
 
 const AppRoutes = () => {
   return (
@@ -26,6 +27,8 @@ const AppRoutes = () => {
       <Route path="/events" element={<PlaceholderPage title="Events" />} />
       <Route path="/home" element={<PlaceholderPage title="Home" />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/events" element={<EventPage />} />
+
 
       {/* <Route path="/" element={<Navigate to="/login" replace />} /> */}
       <Route path="/login" element={<Login />} />
