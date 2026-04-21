@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 function RegionRegister({ onBack }) {
   const navigate = useNavigate();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [serviceNumber, setServiceNumber] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [serviceId, setServiceId] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -20,9 +19,8 @@ function RegionRegister({ onBack }) {
     }
 
     const user = {
-      firstName,
-      lastName,
-      serviceNumber,
+      fullName,
+      serviceId,
       email,
       password,
       region,
@@ -60,13 +58,13 @@ function RegionRegister({ onBack }) {
           <form onSubmit={handleRegister} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-2">
-                First Name
+                Full Name
               </label>
               <input
                 type="text"
-                placeholder="Enter your first name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Enter your Full Name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 required
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none transition-all duration-200 text-slate-700 placeholder-slate-400"
               />
@@ -88,13 +86,13 @@ function RegionRegister({ onBack }) {
 
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-2">
-                Service Number
+                Service ID
               </label>
               <input
                 type="text"
-                placeholder="Enter your service number"
-                value={serviceNumber}
-                onChange={(e) => setServiceNumber(e.target.value)}
+                placeholder="Enter your Service ID"
+                value={serviceId}
+                onChange={(e) => setServiceId(e.target.value)}
                 required
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none transition-all duration-200 text-slate-700 placeholder-slate-400"
               />

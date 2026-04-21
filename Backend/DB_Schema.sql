@@ -442,3 +442,13 @@ WHERE TABLE_NAME = 'User';
 /*Add Alarm Id To Simulate Event --------------------------------------------- */
 ALTER TABLE SimulationEvent
 ADD AlarmId INT NULL;
+
+/* CLEANUP: Remove FirstName/LastName if they were added accidentally in previous runs */
+IF COL_LENGTH('User', 'FirstName') IS NOT NULL ALTER TABLE [User] DROP COLUMN FirstName;
+IF COL_LENGTH('User', 'LastName') IS NOT NULL ALTER TABLE [User] DROP COLUMN LastName;
+IF COL_LENGTH('User', 'ServiceNumber') IS NOT NULL ALTER TABLE [User] DROP COLUMN ServiceNumber;
+
+IF COL_LENGTH('AccountRequest', 'FirstName') IS NOT NULL ALTER TABLE AccountRequest DROP COLUMN FirstName;
+IF COL_LENGTH('AccountRequest', 'LastName') IS NOT NULL ALTER TABLE AccountRequest DROP COLUMN LastName;
+IF COL_LENGTH('AccountRequest', 'ServiceNumber') IS NOT NULL ALTER TABLE AccountRequest DROP COLUMN ServiceNumber;
+

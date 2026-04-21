@@ -1,4 +1,5 @@
 using INMS.Application.Services;
+using INMS.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace INMS.API.Controllers;
@@ -28,15 +29,13 @@ public class UserController : ControllerBase
         return Ok(await _service.GetById(id));
     }
 
-    // Create a new user with a username, password, and role
+    // Create a new user from DTO (FirstName, LastName, RoleId, ServiceId, Areas)
     [HttpPost]
-    public async Task<IActionResult> Create(string username, string password, int roleId)
+    public async Task<IActionResult> Create([FromBody] CreateUserDto dto)
     {
-        await _service.Create(username, password, roleId);
-        return Ok();
+        await _service.CreateFromDto(dto);
+        return Ok(new { message = "User created successfully" });
     }
-
-
 
     // Delete a user by ID
     [HttpDelete("{id}")]
