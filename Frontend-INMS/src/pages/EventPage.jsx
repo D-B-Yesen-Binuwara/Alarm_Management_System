@@ -4,6 +4,7 @@ const EventPage = () => {
     const [search, setSearch] = useState("");
     const [severity, setSeverity] = useState("All");
     const [type, setType] = useState("All");
+    const [eventType, setEventType] = useState("All");
 
     // 🔥 FULL DATA (CEAN + SLBN + MSAN)
     const data = [
@@ -20,6 +21,7 @@ const EventPage = () => {
 
     // 🔍 UNIQUE TYPES
     const types = ["All", ...new Set(data.map((d) => d.type))];
+    const events = ["All", ...new Set(data.map((d) => d.event))];
 
     // 🔍 FILTER
     const filtered = data.filter((d) => {
@@ -27,102 +29,180 @@ const EventPage = () => {
             (d.node.toLowerCase().includes(search.toLowerCase()) ||
                 d.msg.toLowerCase().includes(search.toLowerCase())) &&
             (severity === "All" || d.severity === severity) &&
-            (type === "All" || d.type === type)
+            (type === "All" || d.type === type) &&
+            (eventType === "All" || d.event === eventType)
         );
     });
 
-    // 🎨 ROW COLORS
-    const getRowColor = (sev) => {
-        if (sev === "CRITICAL") return "#f8d7da";
-        if (sev === "MAJOR") return "#fff3cd";
-        if (sev === "INFO") return "#d1ecf1";
+    // 🎨 GET ROW COLOR CLASS
+    const getSeverityRowClass = (sev) => {
+        if (sev === "CRITICAL") return "hover:bg-red-50";
+        if (sev === "MAJOR") return "hover:bg-yellow-50";
+        if (sev === "INFO") return "hover:bg-blue-50";
+        return "hover:bg-gray-50";
     };
 
-    // 🎨 BADGE SAME SIZE
-    const badge = (sev) => {
-        let bg = "gray";
-        if (sev === "CRITICAL") bg = "red";
-        if (sev === "MAJOR") bg = "orange";
-        if (sev === "INFO") bg = "blue";
+    // 🎨 GET SEVERITY BADGE CLASS
+    const getSeverityBadge = (sev) => {
+        if (sev === "CRITICAL") return "bg-red-600 text-white";
+        if (sev === "MAJOR") return "bg-yellow-600 text-white";
+        if (sev === "INFO") return "bg-blue-600 text-white";
+        return "bg-gray-500 text-white";
+    };
 
-        return {
-            background: bg,
-            color: "white",
-            padding: "4px 0",
-            borderRadius: "4px",
-            fontSize: "11px",
-            width: "80px",
-            display: "inline-block",
-            textAlign: "center"
-        };
+    // Stats
+    const stats = {
+        total: data.length,
+        critical: data.filter(d => d.severity === "CRITICAL").length,
+        major: data.filter(d => d.severity === "MAJOR").length,
+        info: data.filter(d => d.severity === "INFO").length,
     };
 
     return (
-        <div style={{ padding: "20px", background: "#f5f5f5", minHeight: "100vh" }}>
-
-            <h3>System Event Log</h3>
-
-            {/* 🔥 FULL FILTER BAR */}
-            <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-
-                {/* TYPE FILTER */}
-                <select onChange={(e) => setType(e.target.value)}>
-                    {types.map((t, i) => (
-                        <option key={i}>{t}</option>
-                    ))}
-                </select>
-
-                {/* SEVERITY FILTER */}
-                <select onChange={(e) => setSeverity(e.target.value)}>
-                    <option>All</option>
-                    <option>CRITICAL</option>
-                    <option>MAJOR</option>
-                    <option>INFO</option>
-                </select>
-
-                {/* SEARCH */}
-                <input
-                    placeholder="Search events..."
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-
-                <button style={{ marginLeft: "auto", background: "#2196F3", color: "white", border: "none", padding: "5px 10px" }}>
-                    Refresh
-                </button>
+        <div className="min-h-screen bg-gray-50 p-6 space-y-6">
+            {/* Title */}
+            <div>
+                <h1 className="text-2xl font-semibold text-gray-800">
+                    System Event Log
+                </h1>
+                <p className="text-gray-500 text-sm mt-0.5">
+                    Monitor all system events and alarm activities across your network
+                </p>
             </div>
 
-            {/* 📊 TABLE */}
-            <table style={{ width: "100%", background: "white", borderCollapse: "collapse" }}>
-                <thead style={{ background: "#eee" }}>
-                    <tr>
-                        <th>Timestamp</th>
-                        <th>Node</th>
-                        <th>Type</th>
-                        <th>Event Type</th>
-                        <th>Officer</th>
-                        <th>Severity</th>
-                        <th>Message</th>
-                    </tr>
-                </thead>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="text-sm text-gray-500 font-medium">Total Events</div>
+                    <div className="text-2xl font-bold text-gray-800 mt-2">{stats.total}</div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-red-200 shadow-sm">
+                    <div className="text-sm text-red-600 font-medium">Critical</div>
+                    <div className="text-2xl font-bold text-red-600 mt-2">{stats.critical}</div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-yellow-200 shadow-sm">
+                    <div className="text-sm text-yellow-600 font-medium">Major</div>
+                    <div className="text-2xl font-bold text-yellow-600 mt-2">{stats.major}</div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
+                    <div className="text-sm text-blue-600 font-medium">Info</div>
+                    <div className="text-2xl font-bold text-blue-600 mt-2">{stats.info}</div>
+                </div>
+            </div>
 
-                <tbody>
-                    {filtered.map((d, i) => (
-                        <tr key={i} style={{ background: getRowColor(d.severity) }}>
-                            <td>{d.time}</td>
-                            <td>{d.node}</td>
-                            <td>{d.type}</td>
-                            <td>{d.event}</td>
-                            <td>{d.officer}</td>
-                            <td>
-                                <span style={badge(d.severity)}>
-                                    {d.severity}
-                                </span>
-                            </td>
-                            <td>{d.msg}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            {/* Filters */}
+            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex flex-col md:flex-row gap-3">
+                    {/* Type Filter */}
+                    <select
+                        value={type}
+                        onChange={(e) => setType(e.target.value)}
+                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        {types.map((t, i) => (
+                            <option key={i}>{t}</option>
+                        ))}
+                    </select>
+
+                    {/* Event Type Filter */}
+                    <select
+                        value={eventType}
+                        onChange={(e) => setEventType(e.target.value)}
+                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        {events.map((e, i) => (
+                            <option key={i}>{e}</option>
+                        ))}
+                    </select>
+
+                    {/* Severity Filter */}
+                    <select
+                        value={severity}
+                        onChange={(e) => setSeverity(e.target.value)}
+                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option>All</option>
+                        <option>CRITICAL</option>
+                        <option>MAJOR</option>
+                        <option>INFO</option>
+                    </select>
+
+                    {/* Search */}
+                    <input
+                        type="text"
+                        placeholder="Search node or message..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+
+                    <button className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition whitespace-nowrap">
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            {/* Events Table */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-gray-200">
+                    <h2 className="text-base font-semibold text-gray-700">
+                        Events ({filtered.length})
+                    </h2>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead>
+                            <tr className="border-b border-gray-200 bg-gray-50">
+                                <th className="px-4 py-3 font-semibold text-gray-600 text-xs uppercase">Timestamp</th>
+                                <th className="px-4 py-3 font-semibold text-gray-600 text-xs uppercase">Node</th>
+                                <th className="px-4 py-3 font-semibold text-gray-600 text-xs uppercase">Type</th>
+                                <th className="px-4 py-3 font-semibold text-gray-600 text-xs uppercase">Event Type</th>
+                                <th className="px-4 py-3 font-semibold text-gray-600 text-xs uppercase">Officer</th>
+                                <th className="px-4 py-3 font-semibold text-gray-600 text-xs uppercase">Severity</th>
+                                <th className="px-4 py-3 font-semibold text-gray-600 text-xs uppercase">Message</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400 text-sm">
+                                        No events found.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filtered.map((d, i) => (
+                                    <tr
+                                        key={i}
+                                        className={`border-b border-gray-100 transition ${getSeverityRowClass(d.severity)}`}
+                                    >
+                                        <td className="px-4 py-3 text-xs text-gray-600 font-mono">{d.time}</td>
+                                        <td className="px-4 py-3 font-medium text-gray-800">{d.node}</td>
+                                        <td className="px-4 py-3">
+                                            <span className="bg-purple-100 text-purple-700 text-xs font-semibold px-2 py-1 rounded">
+                                                {d.type}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2 py-1 rounded">
+                                                {d.event}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-600">{d.officer}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`text-xs font-semibold px-3 py-1 rounded ${getSeverityBadge(d.severity)}`}>
+                                                {d.severity}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{d.msg}</td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 };

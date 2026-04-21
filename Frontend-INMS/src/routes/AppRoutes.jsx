@@ -24,10 +24,9 @@ const AppRoutes = () => {
       <Route path="/vendors" element={<VendorsPage />} />
       <Route path="/profile" element={<UserProfile />} />
       <Route path="/user-management" element={<UserManagement />} />
-      <Route path="/events" element={<PlaceholderPage title="Events" />} />
+      <Route path="/events" element={<EventPage />} />
       <Route path="/home" element={<PlaceholderPage title="Home" />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/events" element={<EventPage />} />
 
 
       {/* <Route path="/" element={<Navigate to="/login" replace />} /> */}
