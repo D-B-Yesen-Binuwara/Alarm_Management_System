@@ -72,21 +72,21 @@ const EventPage = () => {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                    <div className="text-sm text-gray-500 font-medium">Total Events</div>
-                    <div className="text-2xl font-bold text-gray-800 mt-2">{stats.total}</div>
+                <div className="border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50 p-4 rounded-lg border shadow-sm">
+                    <div className="text-sm text-sky-700 font-medium">Total Events</div>
+                    <div className="text-2xl font-bold text-sky-900 mt-2">{stats.total}</div>
                 </div>
-                <div className="bg-white p-4 rounded-lg border border-red-200 shadow-sm">
-                    <div className="text-sm text-red-600 font-medium">Critical</div>
-                    <div className="text-2xl font-bold text-red-600 mt-2">{stats.critical}</div>
+                <div className="border-rose-200 bg-gradient-to-br from-rose-50 to-orange-50 p-4 rounded-lg border shadow-sm">
+                    <div className="text-sm text-rose-700 font-medium">Critical</div>
+                    <div className="text-2xl font-bold text-rose-900 mt-2">{stats.critical}</div>
                 </div>
-                <div className="bg-white p-4 rounded-lg border border-yellow-200 shadow-sm">
-                    <div className="text-sm text-yellow-600 font-medium">Major</div>
-                    <div className="text-2xl font-bold text-yellow-600 mt-2">{stats.major}</div>
+                <div className="border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-4 rounded-lg border shadow-sm">
+                    <div className="text-sm text-amber-700 font-medium">Major</div>
+                    <div className="text-2xl font-bold text-amber-900 mt-2">{stats.major}</div>
                 </div>
-                <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
-                    <div className="text-sm text-blue-600 font-medium">Info</div>
-                    <div className="text-2xl font-bold text-blue-600 mt-2">{stats.info}</div>
+                <div className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-lime-50 p-4 rounded-lg border shadow-sm">
+                    <div className="text-sm text-emerald-700 font-medium">Info</div>
+                    <div className="text-2xl font-bold text-emerald-900 mt-2">{stats.info}</div>
                 </div>
             </div>
 
