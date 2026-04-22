@@ -1,40 +1,3 @@
-/* =========================================================================================
-   INMS (Intelligent Network Management System) - Database Schema
-   =========================================================================================
-   
-   TABLE DESCRIPTIONS & USAGE:
-   
-   [Area Structure]
-   - Region: Represents high-level geographic areas. Used by frontend for map filtering and assignments.
-   - Province: Subdivisions of a Region. Used by frontend for cascading location dropdowns.
-   - LEA (Local Exchange Area): Lowest level geographic unit where devices are physically located. 
-     Used by frontend to group devices and assign precise operational jurisdictions.
-
-   [Users & Access]
-   - Role: Defines permission levels (e.g., Admin, Region Officer). Determines what UI elements are visible.
-   - User: System accounts with authentication details. 
-   - UserAreaAssignment: Links users to specific geographical areas (Region/Province/LEA) so the frontend 
-     can restrict their dashboard and map to only show authorized devices.
-
-   [Devices & Topology]
-   - Device: The primary hardware nodes (SLBN, CEAN, MSAN). Contains coordinates and active status. 
-     Vital for the frontend map rendering and device inventory tables.
-   - DeviceLink: Defines the parent-child relationships between devices. Used by the backend to calculate 
-     downstream impacts, and by the frontend to potentially draw network topology diagrams.
-
-   [Alarms & Monitoring]
-   - Alarm: Current and historical alert states for devices (e.g., NODE_DOWN). Displayed heavily on the 
-     frontend dashboard's active alarm feed and history logs.
-   - RootCause: Pinpoints the specific device responsible for an alarm. Helps frontend users identify 
-     exactly which node to fix when multiple devices go down simultaneously.
-   - ImpactedDevice: Lists all downstream devices affected by a root cause. The frontend uses this to 
-     highlight the "blast radius" of a failure on the map.
-   - Heartbeat: A raw log of ping/status checks for devices over time. Can be used by the frontend to show 
-     uptime statistics or historical availability logs.
-   - SimulationEvent: Audit trail of manually triggered system failures. Used by the frontend to show users 
-     what testing scenarios were executed and when.
-========================================================================================= */
-
 CREATE DATABASE INMS_SLT;
 USE INMS_SLT;
 DROP DATABASE INM_SLT;
@@ -397,3 +360,9 @@ CREATE TABLE AccountRequest (
     CONSTRAINT FK_AccountRequest_Province FOREIGN KEY (ProvinceId) REFERENCES Province(ProvinceId),
     CONSTRAINT FK_AccountRequest_LEA      FOREIGN KEY (LEAId)      REFERENCES LEA(LEAId)
 );
+
+
+
+/*Add Alarm Id To Simulate Event --------------------------------------------- */
+ALTER TABLE SimulationEvent
+ADD AlarmId INT NULL;
