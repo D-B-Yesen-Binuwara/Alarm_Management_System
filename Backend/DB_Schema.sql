@@ -362,7 +362,55 @@ CREATE TABLE AccountRequest (
 );
 
 
-
 /*Add Alarm Id To Simulate Event --------------------------------------------- */
 ALTER TABLE SimulationEvent
 ADD AlarmId INT NULL;
+
+--------- vendor initialization ----------------------------
+-- Create Vendor table
+CREATE TABLE Vendor (
+    VendorId INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(100) NOT NULL,
+    Brand NVARCHAR(50) NOT NULL,
+    DeviceType NVARCHAR(50) NOT NULL, -- SLBN | CEAN | MSAN | Customer
+    Description NVARCHAR(255) NULL,
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
+);
+
+-- Add VendorId column to Device table
+ALTER TABLE Device 
+ADD VendorId INT NULL;
+
+-- Add foreign key constraint
+ALTER TABLE Device 
+ADD CONSTRAINT FK_Device_Vendor 
+FOREIGN KEY (VendorId) REFERENCES Vendor(VendorId) 
+ON DELETE SET NULL;
+
+-- Add check constraint to ensure Device.DeviceType matches Vendor.DeviceType
+ALTER TABLE Device 
+ADD CONSTRAINT CK_Device_Vendor_DeviceType_Match 
+CHECK (VendorId IS NULL OR NOT EXISTS (
+    SELECT 1 FROM Vendor v 
+    WHERE v.VendorId = Device.VendorId 
+    AND v.DeviceType != Device.DeviceType
+));
+
+-- Create indexes for performance
+CREATE INDEX IX_Device_VendorId ON Device(VendorId);
+CREATE INDEX IX_Vendor_DeviceType ON Vendor(DeviceType);
+CREATE INDEX IX_Vendor_Brand ON Vendor(Brand);
+
+-- Insert sample vendor data
+INSERT INTO Vendor (Name, Brand, DeviceType, Description, IsActive, CreatedAt) VALUES 
+('Huawei SLBN Vendor', 'Huawei', 'SLBN', 'Huawei vendor for SLBN devices', 1, GETDATE()),
+('Nokia CEAN Vendor', 'Nokia', 'CEAN', 'Nokia vendor for CEAN devices', 1, GETDATE()),
+('ZTE MSAN Vendor', 'ZTE', 'MSAN', 'ZTE vendor for MSAN devices', 1, GETDATE()),
+('Huawei MSAN Vendor', 'Huawei', 'MSAN', 'Another Huawei vendor for MSAN devices', 1, GETDATE()),
+('Ericsson SLBN Vendor', 'Ericsson', 'SLBN', 'Ericsson vendor for SLBN devices', 1, GETDATE());
+
+-- Verify the setup
+SELECT * FROM Vendor;
+select * from Device;
+SELECT DeviceId, DeviceName, DeviceType, VendorId FROM Device;
