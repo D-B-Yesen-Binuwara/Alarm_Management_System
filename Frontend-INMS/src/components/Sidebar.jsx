@@ -22,7 +22,7 @@ function NavLink({ to, collapsed, label, children }) {
 export default function Sidebar({ collapsed }) {
   return (
     <div
-      className={`z-30 bg-gradient-to-b from-slate-900 to-slate-800 text-sky-100 flex flex-col h-full shadow-lg border-r border-emerald-400/40 transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}
+      className={`bg-gradient-to-b from-slate-900 to-slate-800 text-sky-100 flex flex-col shadow-lg border-r border-emerald-400/40 transition-all duration-300 fixed left-0 top-16 bottom-0 z-40 ${collapsed ? 'w-16' : 'w-64'}`}
     >
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="flex flex-col gap-1 px-2">
