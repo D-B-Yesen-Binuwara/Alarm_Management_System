@@ -10,6 +10,7 @@ import CorrelationPage from '../pages/CorrelationPage';
 import VendorsPage from '../pages/Vendors/VendorsPage';
 import Register from '../pages/Register';
 import Login from '../pages/Login';
+import Chat from '../components/Chat';
 
 const AppRoutes = () => {
   return (
@@ -21,6 +22,7 @@ const AppRoutes = () => {
       <Route path="/device-management" element={<DeviceManagement />} />
       <Route path="/correlation" element={<CorrelationPage />} />
       <Route path="/vendors" element={<VendorsPage />} />
+      <Route path="/chat" element={<Chat />} />
       <Route path="/profile" element={<UserProfile />} />
       <Route path="/user-management" element={<UserManagement />} />
       <Route path="/events" element={<PlaceholderPage title="Events" />} />

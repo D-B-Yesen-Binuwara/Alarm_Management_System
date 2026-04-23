@@ -53,9 +53,22 @@ builder.Services.AddScoped<IHeartbeatService, HeartbeatService>();
 builder.Services.AddScoped<ISimulationEventRepository, SimulationEventRepository>();
 builder.Services.AddScoped<ISimulationEventService, SimulationEventService>();
 
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IChatService, ChatService>();
+
 // Background Services
 builder.Services.AddHostedService<HeartbeatSchedulerService>();
 builder.Services.AddHostedService<HeartbeatFailureDetectionService>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
 
 builder.Services.AddControllers();
 
@@ -72,8 +85,13 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
-app.UseSwagger();
-app.UseSwaggerUI();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();
 app.MapControllers();

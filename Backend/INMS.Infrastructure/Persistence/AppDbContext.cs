@@ -22,6 +22,9 @@ public class AppDbContext : DbContext
     public DbSet<Heartbeat> Heartbeats { get; set; }
     public DbSet<SimulationEvent> SimulationEvents { get; set; }
     public DbSet<AccountRequest> AccountRequests { get; set; }
+    public DbSet<NetworkNode> NetworkNodes { get; set; }
+    public DbSet<Customer> Customers { get; set; }
+    public DbSet<FailureEvent> FailureEvents { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -75,5 +78,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Heartbeat>().ToTable("Heartbeat");
         modelBuilder.Entity<SimulationEvent>().ToTable("SimulationEvent");
         modelBuilder.Entity<AccountRequest>().ToTable("AccountRequest");
+        modelBuilder.Entity<NetworkNode>().ToTable("NetworkNode");
+        modelBuilder.Entity<Customer>().ToTable("Customer");
+        modelBuilder.Entity<FailureEvent>().ToTable("FailureEvent");
     }
 }
