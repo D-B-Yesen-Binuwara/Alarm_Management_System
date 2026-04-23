@@ -30,7 +30,7 @@ const Chat = () => {
     try {
       const response = await ChatService.sendMessage(userMessage);
       setMessages([...newMessages, { type: 'bot', content: response.message }]);
-    } catch (error) {
+    } catch (_error) {
       setMessages([...newMessages, {
         type: 'bot',
         content: 'Sorry, I encountered an error. Please try again.'
