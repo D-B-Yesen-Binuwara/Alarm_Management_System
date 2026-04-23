@@ -24,14 +24,6 @@ function Register() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <img
-            src="/sltmobitel-logo.png"
-            alt="SLTMobitel"
-            className="h-16 mx-auto mb-4 object-contain"
-          />
-        </div>
-
         {/* Role Selection Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
           <h2 className="text-xl font-semibold text-slate-700 mb-6 text-center">
