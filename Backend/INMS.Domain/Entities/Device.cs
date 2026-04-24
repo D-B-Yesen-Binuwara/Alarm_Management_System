@@ -37,6 +37,10 @@ namespace INMS.Domain.Entities
         [ForeignKey("LEA")]
         public int LEAId { get; set; }
 
+        [ForeignKey("Vendor")]
+        public int? VendorId { get; set; }
+        public Vendor? Vendor { get; set; }
+
         public int? AssignedUserId { get; set; }
         public User? AssignedUser { get; set; }
 
