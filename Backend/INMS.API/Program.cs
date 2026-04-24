@@ -82,6 +82,7 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.EnsureCreated();
+    await EnsureCompatibilitySchemaAsync(dbContext);
 }
 
 // Configure the HTTP request pipeline.
@@ -98,4 +99,31 @@ app.MapControllers();
 
 
 app.Run();
+
+static Task EnsureCompatibilitySchemaAsync(AppDbContext dbContext)
+{
+    const string sql = """
+        IF COL_LENGTH('dbo.[User]', 'ServiceId') IS NULL
+        BEGIN
+            ALTER TABLE dbo.[User] ADD ServiceId NVARCHAR(50) NULL;
+        END;
+
+        IF COL_LENGTH('dbo.[User]', 'Email') IS NULL
+        BEGIN
+            ALTER TABLE dbo.[User] ADD Email NVARCHAR(150) NULL;
+        END;
+
+        IF COL_LENGTH('dbo.[Role]', 'Description') IS NULL
+        BEGIN
+            ALTER TABLE dbo.[Role] ADD Description NVARCHAR(255) NULL;
+        END;
+
+        IF COL_LENGTH('dbo.[Region]', 'Description') IS NULL
+        BEGIN
+            ALTER TABLE dbo.[Region] ADD Description NVARCHAR(255) NULL;
+        END;
+        """;
+
+    return dbContext.Database.ExecuteSqlRawAsync(sql);
+}
 
