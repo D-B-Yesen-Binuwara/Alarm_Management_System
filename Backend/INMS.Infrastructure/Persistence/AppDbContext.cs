@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<Heartbeat> Heartbeats { get; set; }
     public DbSet<SimulationEvent> SimulationEvents { get; set; }
     public DbSet<AccountRequest> AccountRequests { get; set; }
+    public DbSet<Vendor> Vendors { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -72,8 +73,29 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Role>()
             .Property(r => r.RoleName)
             .HasColumnName("Name");
+            
+        modelBuilder.Entity<Vendor>().ToTable("Vendor");
         modelBuilder.Entity<Heartbeat>().ToTable("Heartbeat");
         modelBuilder.Entity<SimulationEvent>().ToTable("SimulationEvent");
         modelBuilder.Entity<AccountRequest>().ToTable("AccountRequest");
+
+        // Vendor configuration
+        modelBuilder.Entity<Vendor>()
+            .Property(v => v.DeviceType)
+            .HasConversion<string>();
+
+        // Device-Vendor relationship with DeviceType constraint
+        modelBuilder.Entity<Device>()
+            .HasOne(d => d.Vendor)
+            .WithMany(v => v.Devices)
+            .HasForeignKey(d => d.VendorId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // Add check constraint to ensure Device.DeviceType matches Vendor.DeviceType
+        modelBuilder.Entity<Device>()
+            .ToTable(t => t.HasCheckConstraint(
+                "CK_Device_Vendor_DeviceType_Match",
+                "VendorId IS NULL OR NOT EXISTS (SELECT 1 FROM Vendor v WHERE v.VendorId = Device.VendorId AND v.DeviceType != Device.DeviceType)"
+            ));
     }
 }

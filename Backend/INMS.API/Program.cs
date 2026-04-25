@@ -41,6 +41,7 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAreaAssignmentRepository, UserAreaAssignmentRepository>();
 builder.Services.AddScoped<UserAreaAssignmentService>();
+builder.Services.AddScoped<IImpactAnalysisService, ImpactAnalysisService>();
 
 
 builder.Services.AddScoped<IAlarmRepository, AlarmRepository>();
@@ -51,6 +52,10 @@ builder.Services.AddScoped<IHeartbeatService, HeartbeatService>();
 
 builder.Services.AddScoped<ISimulationEventRepository, SimulationEventRepository>();
 builder.Services.AddScoped<ISimulationEventService, SimulationEventService>();
+
+// Vendor Services
+builder.Services.AddScoped<IVendorRepository, VendorRepository>();
+builder.Services.AddScoped<IVendorService, VendorService>();
 
 // Background Services
 builder.Services.AddHostedService<HeartbeatSchedulerService>();
@@ -63,12 +68,16 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();  
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Create the database and schema automatically for first-time container startup.
+using (var scope = app.Services.CreateScope())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.EnsureCreated();
 }
+
+// Configure the HTTP request pipeline.
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.MapControllers();

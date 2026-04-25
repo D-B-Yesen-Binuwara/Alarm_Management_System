@@ -10,6 +10,7 @@ import {
   normalizeStatus
 } from "../utils/formatters";
 
+// Mock data for nodes
 const MOCK_NODES = [
   {
     name: "MSAN-BLR-001",
@@ -35,13 +36,16 @@ const MOCK_NODES = [
   },
 ];
 
+// Default filter values
 const DEFAULT_FILTERS = { search: "", region: "", type: "", status: "" };
 
+// Main ImpactAnalysis component
 export default function ImpactAnalysis() {
   const [searchParams] = useSearchParams();
   const [nodeSearch, setNodeSearch] = useState("");
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
+  // Load device name from URL parameter
   useEffect(() => {
     const deviceId = searchParams.get("deviceId");
     if (!deviceId) return;
@@ -51,6 +55,7 @@ export default function ImpactAnalysis() {
     }).catch(() => {});
   }, [searchParams]);
 
+  // Filter nodes based on search and filters
   const filtered = MOCK_NODES.filter((n) => {
     const term = filters.search.toLowerCase();
     if (term && !n.name.toLowerCase().includes(term) && !n.ip.includes(term)) return false;
@@ -60,11 +65,12 @@ export default function ImpactAnalysis() {
     return true;
   });
 
+  // Count of affected nodes
   const affectedCount = MOCK_NODES.length;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
-      {/* Title */}
+      {/* Page Title */}
       <div>
         <h1 className="text-2xl font-semibold text-gray-800">
           Fault Localization & Impact Analysis
@@ -74,7 +80,7 @@ export default function ImpactAnalysis() {
         </p>
       </div>
 
-      {/* Selector */}
+      {/* Node Selector */}
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-2">
         <label className="text-sm font-medium text-gray-600">
           Select Source Node

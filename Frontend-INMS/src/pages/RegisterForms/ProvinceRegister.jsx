@@ -26,19 +26,6 @@ function ProvinceRegister() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo and Title Section */}
-        <div className="text-center mb-8">
-          <img
-            src="/sltmobitel-logo.png"
-            alt="SLTMobitel"
-            className="h-16 mx-auto mb-4 object-contain"
-          />
-          <h1 className="text-2xl font-bold text-slate-800">
-            Integrated Network Management System
-          </h1>
-          <p className="text-slate-500 mt-2">Province Officer Registration</p>
-        </div>
-
         {/* Registration Form Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
           <h2 className="text-xl font-semibold text-slate-700 mb-6 text-center">
