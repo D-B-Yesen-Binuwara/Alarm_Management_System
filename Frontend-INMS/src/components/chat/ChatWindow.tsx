@@ -1,11 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { X, Send, Bot, User } from 'lucide-react';
-import ChatService from '../../services/ChatService';
-
-interface Message {
-  type: 'user' | 'bot';
-  content: string;
-}
+import useChatSession from './useChatSession';
 
 interface ChatWindowProps {
   isOpen: boolean;
@@ -13,9 +8,16 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    messages,
+    inputMessage,
+    isLoading,
+    setInputMessage,
+    sendMessage,
+    clearHistory,
+    reloadHistory,
+    suggestedPrompts
+  } = useChatSession();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -29,40 +31,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
+      reloadHistory();
       inputRef.current.focus();
     }
-  }, [isOpen]);
+  }, [isOpen, reloadHistory]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim() || isLoading) return;
-
-    const userMessage = inputMessage.trim();
-    setInputMessage('');
-
-    // Add user message
-    const newMessages = [...messages, { type: 'user', content: userMessage }];
-    setMessages(newMessages);
-    setIsLoading(true);
-
-    try {
-      const response = await ChatService.sendMessage(userMessage);
-      setMessages([...newMessages, { type: 'bot', content: response.message }]);
-    } catch (error) {
-      setMessages([...newMessages, {
-        type: 'bot',
-        content: 'Sorry, I encountered an error. Please try again.'
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage(e);
-    }
+    await sendMessage();
   };
 
   if (!isOpen) return null;
@@ -77,16 +53,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
           </div>
           <div>
             <h3 className="font-semibold text-gray-800">AI Assistant</h3>
-            <p className="text-xs text-gray-600">How can I help you?</p>
+            <p className="text-xs text-gray-600">History is saved on this browser.</p>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
-          aria-label="Close chat"
-        >
-          <X size={18} className="text-gray-500" />
-        </button>
+        <div className="flex items-center gap-2">
+          {messages.length > 0 && (
+            <button
+              onClick={clearHistory}
+              className="text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200"
+              aria-label="Clear chat history"
+            >
+              Clear
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
+            aria-label="Close chat"
+          >
+            <X size={18} className="text-gray-500" />
+          </button>
+        </div>
       </div>
 
       {/* Messages Container */}
@@ -96,6 +83,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
             <Bot size={48} className="mx-auto mb-4 text-gray-300" />
             <p className="text-lg font-medium">Welcome to INMS AI Assistant!</p>
             <p className="text-sm mt-2">Ask me about network nodes, failures, or system insights.</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {suggestedPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => void sendMessage(prompt)}
+                  disabled={isLoading}
+                  className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors duration-200 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -157,7 +157,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
             placeholder="Type your message..."
             className="flex-1 px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             disabled={isLoading}

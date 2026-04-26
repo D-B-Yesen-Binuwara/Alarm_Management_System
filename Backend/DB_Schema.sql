@@ -1,4 +1,3 @@
-<<<<<<< Ishanka-one
 IF DB_ID('INMS_SLT') IS NOT NULL
 BEGIN
     ALTER DATABASE [INMS_SLT] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
@@ -10,7 +9,7 @@ CREATE DATABASE [INMS_SLT];
 GO
 USE [INMS_SLT];
 GO
-=======
+
 /* =========================================================================================
    INMS (Intelligent Network Management System) - Database Schema
    =========================================================================================
@@ -47,11 +46,6 @@ GO
    - SimulationEvent: Audit trail of manually triggered system failures. Used by the frontend to show users 
      what testing scenarios were executed and when.
 ========================================================================================= */
-
-CREATE DATABASE INMS_SLT;
-USE INMS_SLT;
-DROP DATABASE INM_SLT;
->>>>>>> main
 
 /* AREA STRUCTURE -------------------------------------------------------- */
 CREATE TABLE Region (
@@ -118,10 +112,6 @@ CREATE TABLE Device (
     CONSTRAINT FK_Device_User
         FOREIGN KEY (AssignedUserId) REFERENCES [User](UserId)
 );
-
-ALTER TABLE Device
-ADD Latitude DECIMAL(9,6) NULL,
-    Longitude DECIMAL(9,6) NULL;
 
 /* TOPOLOGY LINKS --------------------------------------------------------------------- */
 CREATE TABLE DeviceLink (
@@ -388,10 +378,6 @@ WHERE DeviceName IN (
     'MSAN-Colombo-A1',
     'MSAN-Colombo-A2'
 );
-
--- Add ServiceId and Email columns to User table
-ALTER TABLE [User] ADD ServiceId NVARCHAR(50) NULL;
-ALTER TABLE [User] ADD Email NVARCHAR(150) NULL;
 
 /* ACCOUNT REQUESTS ------------------------------------------------------------------ */
 CREATE TABLE AccountRequest (

@@ -1,10 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
-import ChatService from '../services/ChatService';
+import React, { useRef, useEffect } from 'react';
+import useChatSession from './chat/useChatSession';
 
 const Chat = () => {
-  const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    messages,
+    inputMessage,
+    isLoading,
+    setInputMessage,
+    sendMessage,
+    clearHistory,
+    suggestedPrompts
+  } = useChatSession();
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -17,35 +23,26 @@ const Chat = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputMessage.trim() || isLoading) return;
-
-    const userMessage = inputMessage.trim();
-    setInputMessage('');
-
-    // Add user message
-    const newMessages = [...messages, { type: 'user', content: userMessage }];
-    setMessages(newMessages);
-    setIsLoading(true);
-
-    try {
-      const response = await ChatService.sendMessage(userMessage);
-      setMessages([...newMessages, { type: 'bot', content: response.message }]);
-    } catch (_error) {
-      setMessages([...newMessages, {
-        type: 'bot',
-        content: 'Sorry, I encountered an error. Please try again.'
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
+    await sendMessage();
   };
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b px-6 py-4">
-        <h1 className="text-xl font-semibold text-gray-800">INMS AI Assistant</h1>
-        <p className="text-sm text-gray-600">Network Operations Chatbot</p>
+      <div className="bg-white shadow-sm border-b px-6 py-4 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-800">INMS AI Assistant</h1>
+          <p className="text-sm text-gray-600">Network Operations Chatbot with saved local history</p>
+        </div>
+        {messages.length > 0 && (
+          <button
+            type="button"
+            onClick={clearHistory}
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors duration-200 hover:bg-gray-50 hover:text-gray-800"
+          >
+            Clear History
+          </button>
+        )}
       </div>
 
       {/* Messages Container */}
@@ -54,6 +51,19 @@ const Chat = () => {
           <div className="text-center text-gray-500 mt-8">
             <p className="text-lg">Welcome to INMS AI Assistant!</p>
             <p className="text-sm mt-2">Ask me about network nodes, failures, or system insights.</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              {suggestedPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => void sendMessage(prompt)}
+                  disabled={isLoading}
+                  className="rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 transition-colors duration-200 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

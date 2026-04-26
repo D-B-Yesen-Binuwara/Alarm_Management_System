@@ -21,7 +21,7 @@ Answer in concise, technical, operator-friendly language.";
         private const string GeneralSystemPrompt = @"You are a Network Operations Assistant for an Integrated Network Management System.
 You understand SLBN, CEAN, and MSAN layers.
 Answer only network-related questions.
-If the question needs live data, guide the user toward supported queries such as active alarms, device status, critical alarms, root cause, or impacted devices.
+If the question needs live data, guide the user toward supported queries such as total nodes, active nodes, down nodes, active alarms, device status, critical alarms, root cause, or impacted devices.
 Be concise and technical.";
 
         private static readonly string[] DeviceStatusMarkers =
@@ -58,6 +58,9 @@ Be concise and technical.";
             {
                 return intent switch
                 {
+                    ChatIntent.TotalNodes => await HandleTotalNodesIntentAsync(trimmedMessage),
+                    ChatIntent.ActiveNodes => await HandleActiveNodesIntentAsync(trimmedMessage),
+                    ChatIntent.DownNodes => await HandleDownNodesIntentAsync(trimmedMessage),
                     ChatIntent.ActiveAlarms => await HandleActiveAlarmsIntentAsync(trimmedMessage),
                     ChatIntent.DeviceStatus => await HandleDeviceStatusIntentAsync(trimmedMessage),
                     ChatIntent.CriticalAlarms => await HandleCriticalAlarmsIntentAsync(trimmedMessage),
@@ -122,6 +125,23 @@ Be concise and technical.";
                     row.Status,
                     row.PriorityLevel))
                 .ToList();
+        }
+
+        public async Task<ActiveNodeSummary> GetActiveNodeCountAsync()
+        {
+            var totalNodes = await _dbContext.Devices
+                .AsNoTracking()
+                .CountAsync();
+
+            var activeNodes = await _dbContext.Devices
+                .AsNoTracking()
+                .CountAsync(device => device.Status == DeviceStatus.UP);
+
+            var downNodes = await _dbContext.Devices
+                .AsNoTracking()
+                .CountAsync(device => device.Status == DeviceStatus.DOWN || device.Status == DeviceStatus.UNREACHABLE);
+
+            return new ActiveNodeSummary(totalNodes, activeNodes, downNodes);
         }
 
         public async Task<DeviceStatusSummary?> GetDeviceStatusAsync(string deviceName)
@@ -285,6 +305,27 @@ Be concise and technical.";
                 .ToList();
         }
 
+        private async Task<string> HandleTotalNodesIntentAsync(string userMessage)
+        {
+            var nodeSummary = await GetActiveNodeCountAsync();
+            var structuredData = BuildTotalNodesContext(nodeSummary);
+            return await GenerateDatabaseAwareResponseAsync(userMessage, "total nodes", structuredData);
+        }
+
+        private async Task<string> HandleActiveNodesIntentAsync(string userMessage)
+        {
+            var activeNodeSummary = await GetActiveNodeCountAsync();
+            var structuredData = BuildActiveNodesContext(activeNodeSummary);
+            return await GenerateDatabaseAwareResponseAsync(userMessage, "active nodes", structuredData);
+        }
+
+        private async Task<string> HandleDownNodesIntentAsync(string userMessage)
+        {
+            var nodeSummary = await GetActiveNodeCountAsync();
+            var structuredData = BuildDownNodesContext(nodeSummary);
+            return await GenerateDatabaseAwareResponseAsync(userMessage, "down nodes", structuredData);
+        }
+
         private async Task<string> HandleActiveAlarmsIntentAsync(string userMessage)
         {
             var alarms = await GetActiveAlarmsAsync();
@@ -399,6 +440,28 @@ Be concise and technical.";
         {
             var normalized = userMessage.ToLowerInvariant();
 
+            if (normalized.Contains("total nodes") ||
+                normalized.Contains("total node count") ||
+                normalized.Contains("how many nodes are there") ||
+                normalized.Contains("how many total nodes"))
+            {
+                return ChatIntent.TotalNodes;
+            }
+
+            if (normalized.Contains("active nodes") ||
+                normalized.Contains("reachable nodes") ||
+                normalized.Contains("active node count"))
+            {
+                return ChatIntent.ActiveNodes;
+            }
+
+            if (normalized.Contains("down nodes") ||
+                normalized.Contains("failed nodes") ||
+                normalized.Contains("unreachable nodes"))
+            {
+                return ChatIntent.DownNodes;
+            }
+
             if (normalized.Contains("impacted devices"))
             {
                 return ChatIntent.ImpactedDevices;
@@ -503,6 +566,36 @@ Be concise and technical.";
             return builder.ToString().TrimEnd();
         }
 
+        private static string BuildActiveNodesContext(ActiveNodeSummary summary)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine("Network node summary:");
+            builder.AppendLine($"- TotalNodes={summary.TotalNodes}");
+            builder.AppendLine($"- ActiveNodes={summary.ActiveNodes}");
+            builder.AppendLine($"- DownOrUnreachableNodes={summary.DownNodes}");
+            return builder.ToString().TrimEnd();
+        }
+
+        private static string BuildTotalNodesContext(ActiveNodeSummary summary)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine("Network total node summary:");
+            builder.AppendLine($"- TotalNodes={summary.TotalNodes}");
+            builder.AppendLine($"- ActiveNodes={summary.ActiveNodes}");
+            builder.AppendLine($"- DownOrUnreachableNodes={summary.DownNodes}");
+            return builder.ToString().TrimEnd();
+        }
+
+        private static string BuildDownNodesContext(ActiveNodeSummary summary)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine("Network down node summary:");
+            builder.AppendLine($"- DownOrUnreachableNodes={summary.DownNodes}");
+            builder.AppendLine($"- ActiveNodes={summary.ActiveNodes}");
+            builder.AppendLine($"- TotalNodes={summary.TotalNodes}");
+            return builder.ToString().TrimEnd();
+        }
+
         private static string BuildDeviceStatusContext(DeviceStatusSummary device)
         {
             var builder = new StringBuilder();
@@ -588,6 +681,11 @@ Be concise and technical.";
             DeviceStatus DeviceStatus,
             PriorityLevel PriorityLevel);
 
+        public sealed record ActiveNodeSummary(
+            int TotalNodes,
+            int ActiveNodes,
+            int DownNodes);
+
         public sealed record DeviceStatusSummary(
             int DeviceId,
             string DeviceName,
@@ -625,6 +723,9 @@ Be concise and technical.";
         private enum ChatIntent
         {
             General,
+            TotalNodes,
+            ActiveNodes,
+            DownNodes,
             ActiveAlarms,
             DeviceStatus,
             CriticalAlarms,
