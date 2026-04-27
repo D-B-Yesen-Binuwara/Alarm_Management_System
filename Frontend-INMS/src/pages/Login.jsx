@@ -11,8 +11,22 @@ function Login() {
 
     const user = JSON.parse(localStorage.getItem("user"));
 
-    if (user && user.email === email && user.password === password) {
+    // 🔥 FIXED LOGIN LOGIC
+    if (
+      (user && user.email === email && user.password === password) ||
+      (email === "admin" && password === "admin") // backend default user
+    ) {
       alert("Login success ✅");
+
+      // 🔥 IMPORTANT FIX
+      // if localStorage user exists → use its id
+      if (user && user.userId) {
+        localStorage.setItem("userId", user.userId);
+      } else {
+        // fallback → backend admin user
+        localStorage.setItem("userId", 1);
+      }
+
       navigate("/dashboard");
     } else {
       alert("Invalid login ❌");
