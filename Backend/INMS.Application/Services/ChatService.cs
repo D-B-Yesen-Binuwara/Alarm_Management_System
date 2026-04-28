@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using INMS.Application.Interfaces;
 using INMS.Domain.Enums;
 using INMS.Infrastructure.Persistence;
@@ -13,16 +15,14 @@ namespace INMS.Application.Services
     {
         private const string OllamaUrl = "http://localhost:11434/api/generate";
         private const string OllamaModel = "llama3";
-        private const string DatabaseAwareSystemPrompt = @"You are a Network Operations Assistant for an Integrated Network Management System.
-Use only the live database facts provided in the context section.
-Do not invent alarms, devices, root causes, or impacted devices.
-If the database says no records were found, say that clearly.
-Answer in concise, technical, operator-friendly language.";
+        private const int OllamaRequestTimeoutSeconds = 20;
         private const string GeneralSystemPrompt = @"You are a Network Operations Assistant for an Integrated Network Management System.
 You understand SLBN, CEAN, and MSAN layers.
 Answer only network-related questions.
 If the question needs live data, guide the user toward supported queries such as total nodes, active nodes, down nodes, active alarms, device status, critical alarms, root cause, or impacted devices.
 Be concise and technical.";
+        private const int AlarmPreviewLimit = 10;
+        private const int ImpactedDevicePreviewLimit = 10;
 
         private static readonly string[] DeviceStatusMarkers =
         [
@@ -35,13 +35,16 @@ Be concise and technical.";
         private readonly HttpClient _httpClient;
         private readonly AppDbContext _dbContext;
         private readonly ILogger<ChatService> _logger;
+        private static readonly SemaphoreSlim _deviceNamesCacheLock = new SemaphoreSlim(1, 1);
+        private static List<string>? _cachedDeviceNames = null;
+        private static DateTime _cacheExpiry = DateTime.MinValue;
 
         public ChatService(HttpClient httpClient, AppDbContext dbContext, ILogger<ChatService> logger)
         {
             _httpClient = httpClient;
             _dbContext = dbContext;
             _logger = logger;
-            _httpClient.Timeout = TimeSpan.FromSeconds(120);
+            _httpClient.Timeout = TimeSpan.FromSeconds(OllamaRequestTimeoutSeconds);
         }
 
         public async Task<string> GetChatResponseAsync(string userMessage)
@@ -53,10 +56,11 @@ Be concise and technical.";
 
             var trimmedMessage = userMessage.Trim();
             var intent = DetectIntent(trimmedMessage);
+            var stopwatch = Stopwatch.StartNew();
 
             try
             {
-                return intent switch
+                var response = intent switch
                 {
                     ChatIntent.TotalNodes => await HandleTotalNodesIntentAsync(trimmedMessage),
                     ChatIntent.ActiveNodes => await HandleActiveNodesIntentAsync(trimmedMessage),
@@ -68,30 +72,58 @@ Be concise and technical.";
                     ChatIntent.ImpactedDevices => await HandleImpactedDevicesIntentAsync(trimmedMessage),
                     _ => await GenerateGeneralResponseAsync(trimmedMessage)
                 };
+
+                _logger.LogInformation(
+                    "Chat request for intent {Intent} completed in {ElapsedMilliseconds} ms.",
+                    intent,
+                    stopwatch.ElapsedMilliseconds);
+
+                return response;
             }
             catch (DbUpdateException ex)
             {
-                _logger.LogError(ex, "Database update error while processing chat request: {UserMessage}", trimmedMessage);
+                _logger.LogError(
+                    ex,
+                    "Database update error while processing chat request after {ElapsedMilliseconds} ms: {UserMessage}",
+                    stopwatch.ElapsedMilliseconds,
+                    trimmedMessage);
+                _cachedDeviceNames = null;  // Invalidate cache on DB update error
                 return "I couldn't read the latest network data because the database operation failed. Please try again.";
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogError(ex, "Database read error while processing chat request: {UserMessage}", trimmedMessage);
+                _logger.LogError(
+                    ex,
+                    "Database read error while processing chat request after {ElapsedMilliseconds} ms: {UserMessage}",
+                    stopwatch.ElapsedMilliseconds,
+                    trimmedMessage);
                 return "I couldn't process the live database results for that request. Please try again.";
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "Ollama request failed while processing chat request: {UserMessage}", trimmedMessage);
+                _logger.LogError(
+                    ex,
+                    "Ollama request failed while processing chat request after {ElapsedMilliseconds} ms: {UserMessage}",
+                    stopwatch.ElapsedMilliseconds,
+                    trimmedMessage);
                 return "I couldn't reach the local Ollama service. Please make sure Ollama is running and the llama3 model is available.";
             }
             catch (TaskCanceledException ex)
             {
-                _logger.LogError(ex, "Ollama request timed out while processing chat request: {UserMessage}", trimmedMessage);
+                _logger.LogError(
+                    ex,
+                    "Ollama request timed out while processing chat request after {ElapsedMilliseconds} ms: {UserMessage}",
+                    stopwatch.ElapsedMilliseconds,
+                    trimmedMessage);
                 return "The AI response timed out. Please try again.";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error while processing chat request: {UserMessage}", trimmedMessage);
+                _logger.LogError(
+                    ex,
+                    "Unexpected error while processing chat request after {ElapsedMilliseconds} ms: {UserMessage}",
+                    stopwatch.ElapsedMilliseconds,
+                    trimmedMessage);
                 return "I encountered an unexpected error while processing that request. Please try again.";
             }
         }
@@ -129,19 +161,21 @@ Be concise and technical.";
 
         public async Task<ActiveNodeSummary> GetActiveNodeCountAsync()
         {
-            var totalNodes = await _dbContext.Devices
+            var summary = await _dbContext.Devices
                 .AsNoTracking()
-                .CountAsync();
+                .GroupBy(_ => 1)
+                .Select(group => new
+                {
+                    TotalNodes = group.Count(),
+                    ActiveNodes = group.Sum(device => device.Status == DeviceStatus.UP ? 1 : 0),
+                    DownNodes = group.Sum(device =>
+                        device.Status == DeviceStatus.DOWN || device.Status == DeviceStatus.UNREACHABLE ? 1 : 0)
+                })
+                .FirstOrDefaultAsync();
 
-            var activeNodes = await _dbContext.Devices
-                .AsNoTracking()
-                .CountAsync(device => device.Status == DeviceStatus.UP);
-
-            var downNodes = await _dbContext.Devices
-                .AsNoTracking()
-                .CountAsync(device => device.Status == DeviceStatus.DOWN || device.Status == DeviceStatus.UNREACHABLE);
-
-            return new ActiveNodeSummary(totalNodes, activeNodes, downNodes);
+            return summary == null
+                ? new ActiveNodeSummary(0, 0, 0)
+                : new ActiveNodeSummary(summary.TotalNodes, summary.ActiveNodes, summary.DownNodes);
         }
 
         public async Task<DeviceStatusSummary?> GetDeviceStatusAsync(string deviceName)
@@ -151,39 +185,27 @@ Be concise and technical.";
                 return null;
             }
 
-            var normalizedDeviceName = NormalizeLookupValue(deviceName);
+            var cleanedDeviceName = CleanupExtractedValue(deviceName);
+            var resolvedDeviceName = await ResolveDeviceNameAsync(cleanedDeviceName) ?? cleanedDeviceName;
 
-            var exactMatch = await _dbContext.Devices
+            var matchedDevice = await _dbContext.Devices
                 .AsNoTracking()
-                .FirstOrDefaultAsync(device => device.DeviceName.ToLower() == normalizedDeviceName);
-
-            var matchedDevice = exactMatch;
-
-            if (matchedDevice == null)
-            {
-                matchedDevice = await _dbContext.Devices
-                    .AsNoTracking()
-                    .Where(device =>
-                        device.DeviceName.ToLower().Contains(normalizedDeviceName) ||
-                        normalizedDeviceName.Contains(device.DeviceName.ToLower()))
-                    .OrderBy(device => device.DeviceName.Length)
-                    .FirstOrDefaultAsync();
-            }
+                .FirstOrDefaultAsync(device => device.DeviceName == resolvedDeviceName);
 
             if (matchedDevice == null)
             {
                 return null;
             }
 
-            var activeAlarmCount = await _dbContext.Alarms
-                .AsNoTracking()
-                .CountAsync(alarm => alarm.DeviceId == matchedDevice.DeviceId && alarm.IsActive);
-
-            var latestAlarmRaisedTime = await _dbContext.Alarms
+            var alarmSummary = await _dbContext.Alarms
                 .AsNoTracking()
                 .Where(alarm => alarm.DeviceId == matchedDevice.DeviceId)
-                .OrderByDescending(alarm => alarm.RaisedTime)
-                .Select(alarm => (DateTime?)alarm.RaisedTime)
+                .GroupBy(_ => 1)
+                .Select(group => new
+                {
+                    ActiveAlarmCount = group.Sum(alarm => alarm.IsActive ? 1 : 0),
+                    LatestAlarmRaisedTime = group.Max(alarm => (DateTime?)alarm.RaisedTime)
+                })
                 .FirstOrDefaultAsync();
 
             return new DeviceStatusSummary(
@@ -195,8 +217,8 @@ Be concise and technical.";
                 matchedDevice.IP,
                 matchedDevice.LEAId,
                 matchedDevice.IsSimulatedDown,
-                activeAlarmCount,
-                latestAlarmRaisedTime);
+                alarmSummary?.ActiveAlarmCount ?? 0,
+                alarmSummary?.LatestAlarmRaisedTime);
         }
 
         public async Task<IReadOnlyList<AlarmSummary>> GetCriticalAlarmsAsync()
@@ -308,29 +330,25 @@ Be concise and technical.";
         private async Task<string> HandleTotalNodesIntentAsync(string userMessage)
         {
             var nodeSummary = await GetActiveNodeCountAsync();
-            var structuredData = BuildTotalNodesContext(nodeSummary);
-            return await GenerateDatabaseAwareResponseAsync(userMessage, "total nodes", structuredData);
+            return $"There are {nodeSummary.TotalNodes} total nodes in the network: {nodeSummary.ActiveNodes} active and {nodeSummary.DownNodes} down or unreachable.";
         }
 
         private async Task<string> HandleActiveNodesIntentAsync(string userMessage)
         {
             var activeNodeSummary = await GetActiveNodeCountAsync();
-            var structuredData = BuildActiveNodesContext(activeNodeSummary);
-            return await GenerateDatabaseAwareResponseAsync(userMessage, "active nodes", structuredData);
+            return $"{activeNodeSummary.ActiveNodes} of {activeNodeSummary.TotalNodes} network nodes are currently active. {activeNodeSummary.DownNodes} are down or unreachable.";
         }
 
         private async Task<string> HandleDownNodesIntentAsync(string userMessage)
         {
             var nodeSummary = await GetActiveNodeCountAsync();
-            var structuredData = BuildDownNodesContext(nodeSummary);
-            return await GenerateDatabaseAwareResponseAsync(userMessage, "down nodes", structuredData);
+            return $"{nodeSummary.DownNodes} network nodes are currently down or unreachable. {nodeSummary.ActiveNodes} remain active out of {nodeSummary.TotalNodes} total nodes.";
         }
 
         private async Task<string> HandleActiveAlarmsIntentAsync(string userMessage)
         {
-            var alarms = await GetActiveAlarmsAsync();
-            var structuredData = BuildActiveAlarmsContext(alarms);
-            return await GenerateDatabaseAwareResponseAsync(userMessage, "active alarms", structuredData);
+            var snapshot = await GetAlarmSnapshotAsync(criticalOnly: false, AlarmPreviewLimit);
+            return BuildAlarmSnapshotResponse(snapshot, "active alarms");
         }
 
         private async Task<string> HandleDeviceStatusIntentAsync(string userMessage)
@@ -347,15 +365,13 @@ Be concise and technical.";
                 return $"I couldn't find a device named '{deviceName}'. Please provide a valid device name.";
             }
 
-            var structuredData = BuildDeviceStatusContext(device);
-            return await GenerateDatabaseAwareResponseAsync(userMessage, "device status", structuredData);
+            return BuildDeviceStatusResponse(device);
         }
 
         private async Task<string> HandleCriticalAlarmsIntentAsync(string userMessage)
         {
-            var alarms = await GetCriticalAlarmsAsync();
-            var structuredData = BuildCriticalAlarmsContext(alarms);
-            return await GenerateDatabaseAwareResponseAsync(userMessage, "critical alarms", structuredData);
+            var snapshot = await GetAlarmSnapshotAsync(criticalOnly: true, AlarmPreviewLimit);
+            return BuildAlarmSnapshotResponse(snapshot, "critical alarms");
         }
 
         private async Task<string> HandleRootCauseIntentAsync(string userMessage)
@@ -372,8 +388,7 @@ Be concise and technical.";
                 return $"No root cause record was found for alarm ID {alarmId.Value}.";
             }
 
-            var structuredData = BuildRootCauseContext(rootCause);
-            return await GenerateDatabaseAwareResponseAsync(userMessage, "root cause", structuredData);
+            return BuildRootCauseResponse(rootCause);
         }
 
         private async Task<string> HandleImpactedDevicesIntentAsync(string userMessage)
@@ -390,8 +405,7 @@ Be concise and technical.";
                 return $"No impacted devices were found for alarm ID {alarmId.Value}.";
             }
 
-            var structuredData = BuildImpactedDevicesContext(alarmId.Value, impactedDevices);
-            return await GenerateDatabaseAwareResponseAsync(userMessage, "impacted devices", structuredData);
+            return BuildImpactedDevicesResponse(alarmId.Value, impactedDevices);
         }
 
         private async Task<string> GenerateGeneralResponseAsync(string userMessage)
@@ -400,19 +414,41 @@ Be concise and technical.";
             return await RequestOllamaResponseAsync(prompt);
         }
 
-        private async Task<string> GenerateDatabaseAwareResponseAsync(string userMessage, string intentName, string structuredData)
+        private async Task<AlarmSnapshot> GetAlarmSnapshotAsync(bool criticalOnly, int limit)
         {
-            var promptBuilder = new StringBuilder();
-            promptBuilder.AppendLine(DatabaseAwareSystemPrompt);
-            promptBuilder.AppendLine();
-            promptBuilder.AppendLine($"Intent: {intentName}");
-            promptBuilder.AppendLine("Database context:");
-            promptBuilder.AppendLine(structuredData);
-            promptBuilder.AppendLine();
-            promptBuilder.AppendLine($"User: {userMessage}");
-            promptBuilder.AppendLine("Assistant:");
+            var query =
+                from alarm in _dbContext.Alarms.AsNoTracking()
+                join device in _dbContext.Devices.AsNoTracking() on alarm.DeviceId equals device.DeviceId
+                where alarm.IsActive && (!criticalOnly || device.PriorityLevel == PriorityLevel.Critical)
+                select new
+                {
+                    alarm.AlarmId,
+                    alarm.DeviceId,
+                    device.DeviceName,
+                    alarm.AlarmType,
+                    alarm.RaisedTime,
+                    device.Status,
+                    device.PriorityLevel
+                };
 
-            return await RequestOllamaResponseAsync(promptBuilder.ToString());
+            var totalCount = await query.CountAsync();
+            var rows = await query
+                .OrderByDescending(row => row.RaisedTime)
+                .Take(limit)
+                .ToListAsync();
+
+            return new AlarmSnapshot(
+                totalCount,
+                rows
+                    .Select(row => new AlarmSummary(
+                        row.AlarmId,
+                        row.DeviceId,
+                        row.DeviceName,
+                        row.AlarmType,
+                        row.RaisedTime,
+                        row.Status,
+                        row.PriorityLevel))
+                    .ToList());
         }
 
         private async Task<string> RequestOllamaResponseAsync(string prompt)
@@ -421,7 +457,8 @@ Be concise and technical.";
             {
                 model = OllamaModel,
                 prompt,
-                stream = false
+                stream = false,
+                keep_alive = "15m"
             };
 
             var response = await _httpClient.PostAsJsonAsync(OllamaUrl, requestBody);
@@ -440,49 +477,90 @@ Be concise and technical.";
         {
             var normalized = userMessage.ToLowerInvariant();
 
-            if (normalized.Contains("total nodes") ||
-                normalized.Contains("total node count") ||
-                normalized.Contains("how many nodes are there") ||
-                normalized.Contains("how many total nodes"))
+            if (ContainsAny(normalized,
+                    "total nodes",
+                    "total node count",
+                    "how many nodes are there",
+                    "how many total nodes",
+                    "number of nodes",
+                    "node count",
+                    "count of nodes"))
             {
                 return ChatIntent.TotalNodes;
             }
 
-            if (normalized.Contains("active nodes") ||
-                normalized.Contains("reachable nodes") ||
-                normalized.Contains("active node count"))
+            if (ContainsAny(normalized,
+                    "active nodes",
+                    "reachable nodes",
+                    "active node count",
+                    "up nodes",
+                    "online nodes",
+                    "healthy nodes",
+                    "available nodes",
+                    "how many are up",
+                    "how many up"))
             {
                 return ChatIntent.ActiveNodes;
             }
 
-            if (normalized.Contains("down nodes") ||
-                normalized.Contains("failed nodes") ||
-                normalized.Contains("unreachable nodes"))
+            if (ContainsAny(normalized,
+                    "down nodes",
+                    "failed nodes",
+                    "unreachable nodes",
+                    "offline nodes",
+                    "how many are down",
+                    "how many down"))
             {
                 return ChatIntent.DownNodes;
             }
 
-            if (normalized.Contains("impacted devices"))
+            if (ContainsAny(normalized,
+                    "impacted devices",
+                    "affected devices",
+                    "devices impacted"))
             {
                 return ChatIntent.ImpactedDevices;
             }
 
-            if (normalized.Contains("root cause"))
+            if (ContainsAny(normalized,
+                    "root cause",
+                    "cause of alarm",
+                    "why did this alarm happen"))
             {
                 return ChatIntent.RootCause;
             }
 
-            if (normalized.Contains("device status") || normalized.Contains("status of") || normalized.Contains("status for"))
+            if (ContainsAny(normalized,
+                    "device status",
+                    "status of",
+                    "status for",
+                    "device health",
+                    "device state") ||
+                Regex.IsMatch(normalized, @"\bis\s+.+\b(up|down|offline|online|reachable|healthy)\b") ||
+                Regex.IsMatch(normalized, @"\b(?:check|show|tell me|what is)\s+.+\bstatus\b"))
             {
                 return ChatIntent.DeviceStatus;
             }
 
-            if (normalized.Contains("active alarms") || normalized.Contains("current alarms"))
+            if (ContainsAny(normalized,
+                    "active alarms",
+                    "current alarms",
+                    "open alarms",
+                    "show alarms",
+                    "list alarms",
+                    "alarm list",
+                    "how many alarms are active",
+                    "how many alarms"))
             {
                 return ChatIntent.ActiveAlarms;
             }
 
-            if (normalized.Contains("critical"))
+            if (ContainsAny(normalized,
+                    "critical alarms",
+                    "critical alarm",
+                    "critical severity",
+                    "highest priority alarms") ||
+                (normalized.Contains("critical") && normalized.Contains("alarm")))
             {
                 return ChatIntent.CriticalAlarms;
             }
@@ -490,12 +568,18 @@ Be concise and technical.";
             return ChatIntent.General;
         }
 
+        private static bool ContainsAny(string value, params string[] phrases)
+        {
+            return phrases.Any(phrase => value.Contains(phrase, StringComparison.OrdinalIgnoreCase));
+        }
+
         private async Task<string?> ExtractDeviceNameAsync(string userMessage)
         {
             var quotedMatch = Regex.Match(userMessage, "[\"'](?<value>[^\"']+)[\"']", RegexOptions.IgnoreCase);
             if (quotedMatch.Success)
             {
-                return quotedMatch.Groups["value"].Value.Trim();
+                return await ResolveDeviceNameAsync(quotedMatch.Groups["value"].Value.Trim())
+                    ?? quotedMatch.Groups["value"].Value.Trim();
             }
 
             foreach (var marker in DeviceStatusMarkers)
@@ -510,18 +594,43 @@ Be concise and technical.";
                 var candidate = CleanupExtractedValue(userMessage[startIndex..]);
                 if (!string.IsNullOrWhiteSpace(candidate))
                 {
-                    return candidate;
+                    return await ResolveDeviceNameAsync(candidate) ?? candidate;
                 }
             }
 
-            var deviceNames = await _dbContext.Devices
-                .AsNoTracking()
-                .Select(device => device.DeviceName)
-                .ToListAsync();
+            // Try to match against cached device names first
+            return await ResolveDeviceNameAsync(userMessage);
+        }
 
-            return deviceNames
-                .OrderByDescending(deviceName => deviceName.Length)
-                .FirstOrDefault(deviceName => userMessage.Contains(deviceName, StringComparison.OrdinalIgnoreCase));
+        private async Task<List<string>> GetCachedDeviceNamesAsync()
+        {
+            // Return cached names if cache is still valid (2 minutes)
+            if (_cachedDeviceNames != null && DateTime.UtcNow < _cacheExpiry)
+            {
+                return _cachedDeviceNames;
+            }
+
+            await _deviceNamesCacheLock.WaitAsync();
+            try
+            {
+                // Double-check after acquiring lock
+                if (_cachedDeviceNames != null && DateTime.UtcNow < _cacheExpiry)
+                {
+                    return _cachedDeviceNames;
+                }
+
+                _cachedDeviceNames = await _dbContext.Devices
+                    .AsNoTracking()
+                    .Select(device => device.DeviceName)
+                    .ToListAsync();
+                
+                _cacheExpiry = DateTime.UtcNow.AddMinutes(2);
+                return _cachedDeviceNames;
+            }
+            finally
+            {
+                _deviceNamesCacheLock.Release();
+            }
         }
 
         private static int? ExtractAlarmId(string userMessage)
@@ -667,6 +776,120 @@ Be concise and technical.";
                 .Trim();
         }
 
+        private async Task<string?> ResolveDeviceNameAsync(string rawValue)
+        {
+            var cleanedValue = CleanupExtractedValue(rawValue);
+            if (string.IsNullOrWhiteSpace(cleanedValue))
+            {
+                return null;
+            }
+
+            var deviceNames = await GetCachedDeviceNamesAsync();
+
+            var exactMatch = deviceNames.FirstOrDefault(
+                deviceName => string.Equals(deviceName, cleanedValue, StringComparison.OrdinalIgnoreCase));
+            if (exactMatch != null)
+            {
+                return exactMatch;
+            }
+
+            return deviceNames
+                .OrderByDescending(deviceName => deviceName.Length)
+                .FirstOrDefault(deviceName =>
+                    deviceName.Contains(cleanedValue, StringComparison.OrdinalIgnoreCase) ||
+                    cleanedValue.Contains(deviceName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string BuildAlarmSnapshotResponse(AlarmSnapshot snapshot, string alarmType)
+        {
+            if (snapshot.TotalCount == 0)
+            {
+                return alarmType == "critical alarms"
+                    ? "There are no active alarms on critical-priority devices right now."
+                    : "There are no active alarms right now.";
+            }
+
+            var builder = new StringBuilder();
+            var verb = snapshot.TotalCount == 1 ? "is" : "are";
+            var totalLabel = snapshot.TotalCount == 1 ? "alarm" : "alarms";
+            var scope = alarmType == "critical alarms" ? " on critical-priority devices" : string.Empty;
+
+            builder.AppendLine($"There {verb} {snapshot.TotalCount} active {totalLabel}{scope}.");
+            builder.AppendLine($"Showing the latest {snapshot.Alarms.Count}:");
+
+            foreach (var alarm in snapshot.Alarms)
+            {
+                builder.AppendLine(
+                    $"- Alarm {alarm.AlarmId} on {alarm.DeviceName} (Device {alarm.DeviceId}) | {alarm.AlarmType} | Status {alarm.DeviceStatus} | Priority {alarm.PriorityLevel} | Raised {FormatUtc(alarm.RaisedTime)}");
+            }
+
+            if (snapshot.TotalCount > snapshot.Alarms.Count)
+            {
+                var remainingCount = snapshot.TotalCount - snapshot.Alarms.Count;
+                var remainingLabel = remainingCount == 1 ? "alarm" : "alarms";
+                builder.AppendLine($"... {remainingCount} more active {remainingLabel} not shown.");
+            }
+
+            return builder.ToString().TrimEnd();
+        }
+
+        private static string BuildDeviceStatusResponse(DeviceStatusSummary device)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine($"Device status for {device.DeviceName}:");
+            builder.AppendLine($"- Status: {device.Status}");
+            builder.AppendLine($"- Type: {device.DeviceType}");
+            builder.AppendLine($"- Priority: {device.PriorityLevel}");
+            builder.AppendLine($"- IP: {device.IP}");
+            builder.AppendLine($"- LEA ID: {device.LEAId}");
+            builder.AppendLine($"- Simulated down: {(device.IsSimulatedDown ? "Yes" : "No")}");
+            builder.AppendLine($"- Active alarms: {device.ActiveAlarmCount}");
+            builder.AppendLine($"- Latest alarm: {(device.LatestAlarmRaisedTime.HasValue ? FormatUtc(device.LatestAlarmRaisedTime.Value) : "None")}");
+            return builder.ToString().TrimEnd();
+        }
+
+        private static string BuildRootCauseResponse(RootCauseSummary rootCause)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine($"Root cause for alarm {rootCause.AlarmId}:");
+            builder.AppendLine($"- Root cause ID: {rootCause.RootCauseId}");
+            builder.AppendLine($"- Device: {rootCause.RootCauseDeviceName} (Device {rootCause.RootCauseDeviceId})");
+            builder.AppendLine($"- Type: {rootCause.RootCauseType}");
+            builder.AppendLine($"- Detected: {FormatUtc(rootCause.DetectedTime)}");
+            return builder.ToString().TrimEnd();
+        }
+
+        private static string BuildImpactedDevicesResponse(int alarmId, IReadOnlyList<ImpactedDeviceSummary> impactedDevices)
+        {
+            var builder = new StringBuilder();
+            var preview = impactedDevices.Take(ImpactedDevicePreviewLimit).ToList();
+            var verb = impactedDevices.Count == 1 ? "is" : "are";
+            var deviceLabel = impactedDevices.Count == 1 ? "device" : "devices";
+
+            builder.AppendLine($"There {verb} {impactedDevices.Count} impacted {deviceLabel} for alarm ID {alarmId}.");
+            builder.AppendLine($"Showing the first {preview.Count}:");
+
+            foreach (var impactedDevice in preview)
+            {
+                builder.AppendLine(
+                    $"- {impactedDevice.DeviceName} (Device {impactedDevice.DeviceId}) | Type {impactedDevice.DeviceType} | Status {impactedDevice.Status} | Impact {impactedDevice.ImpactType}");
+            }
+
+            if (impactedDevices.Count > preview.Count)
+            {
+                var remainingCount = impactedDevices.Count - preview.Count;
+                var remainingLabel = remainingCount == 1 ? "device" : "devices";
+                builder.AppendLine($"... {remainingCount} more impacted {remainingLabel} not shown.");
+            }
+
+            return builder.ToString().TrimEnd();
+        }
+
+        private static string FormatUtc(DateTime value)
+        {
+            return $"{value:yyyy-MM-dd HH:mm:ss} UTC";
+        }
+
         private static string NormalizeLookupValue(string rawValue)
         {
             return CleanupExtractedValue(rawValue).ToLowerInvariant();
@@ -714,6 +937,10 @@ Be concise and technical.";
             string DeviceType,
             DeviceStatus Status,
             string ImpactType);
+
+        private sealed record AlarmSnapshot(
+            int TotalCount,
+            IReadOnlyList<AlarmSummary> Alarms);
 
         private sealed class OllamaResponse
         {
