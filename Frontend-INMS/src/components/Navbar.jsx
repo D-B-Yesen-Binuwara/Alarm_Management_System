@@ -7,7 +7,7 @@ const Navbar = ({ onToggle }) => {
   
   // Define auth pages that hide profile icon
   const authPages = ['/login', '/register'];
-  // Check if current page is an auth page
+  // Check current page is an auth page
   const isAuthPage = authPages.includes(location.pathname);
 
   return (
