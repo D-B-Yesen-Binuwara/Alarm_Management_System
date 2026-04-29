@@ -19,6 +19,17 @@ if (File.Exists(envPath))
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add CORS Policy for local development
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocalhost", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -79,9 +90,13 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
-app.MapControllers();
+// ✅ Add CORS middleware BEFORE UseHttpsRedirection
+app.UseCors("AllowLocalhost");
 
+// ✅ Comment out UseHttpsRedirection for development (HTTP only)
+// app.UseHttpsRedirection();
+
+app.MapControllers();
 
 app.Run();
 

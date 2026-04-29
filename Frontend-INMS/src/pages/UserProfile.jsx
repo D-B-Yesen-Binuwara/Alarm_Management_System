@@ -14,27 +14,66 @@ const UserProfile = () => {
         confirmPassword: ''
     });
 
-    useEffect(() => {
-        // Simulate an API call mapping to User.cs
-        setTimeout(() => {
-            setUserData({
-                userId: '748392',
-                username: 'janedoe99',
-                fullName: 'Jane Doe',
-                passwordHash: 'N0c0perat0r_pwd!', // Simulated real password
-                roleId: 'ROLE_ENGINEER_2',
-                role: 'Network Operations Engineer',
-                stats: {
-                    alarmsResolved: 342,
-                    activeSimulations: 3,
-                    criticalAlertsHandled: 89,
-                    uptimeContributions: '99.98%'
-                }
-            });
-            setLoading(false);
-        }, 500);
-    }, []);
+useEffect(() => {
+  const userId = localStorage.getItem("userId");
 
+  // 🔥 TRY BACKEND FIRST
+  if (userId) {
+    fetch(`http://localhost:5289/api/User/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        console.log("API DATA:", data); // debug
+
+        setUserData({
+          userId: data?.userId || "N/A",
+          username: data?.email || data?.username || "N/A",
+          fullName: data?.fullName || "User",
+          passwordHash: data?.passwordHash || "********",
+          role: data?.role?.roleName || "User",
+          stats: {}
+        });
+
+        setLoading(false);
+      })
+      .catch(err => {
+        console.log("API failed → using localStorage");
+
+        // 🔥 FALLBACK (your old working code)
+        const user = JSON.parse(localStorage.getItem("user"));
+
+        if (user) {
+          setUserData({
+            userId: user.userId || "N/A",
+            username: user.email,
+            fullName: user.name || "User",
+            passwordHash: user.password,
+            role: user.role || "User",
+            stats: {}
+          });
+        }
+
+        setLoading(false);
+      });
+
+  } else {
+    // 🔥 NO USER → fallback
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (user) {
+      setUserData({
+        userId: user.userId || "N/A",
+        username: user.email,
+        fullName: user.name || "User",
+        passwordHash: user.password,
+        role: user.role || "User",
+        stats: {}
+      });
+    }
+
+    setLoading(false);
+  }
+
+}, []);
     const handleEditClick = () => {
         setEditFormData({ ...userData });
         setFormErrors({});
@@ -70,42 +109,79 @@ const UserProfile = () => {
         setIsEditModalOpen(false);
     };
 
-    const handleSavePassword = () => {
-        const errors = {};
+   const handleSavePassword = () => {
+    const errors = {};
 
-        if (!passwordFields.oldPassword) {
-            errors.oldPassword = 'Old password cannot be empty.';
-        } else if (passwordFields.oldPassword !== userData.passwordHash) {
-            errors.oldPassword = 'Old password does not match your current password.';
-        }
+    const user = JSON.parse(localStorage.getItem("user")); // 🔥 GET REAL USER
 
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
-        if (!passwordFields.newPassword) {
-            errors.newPassword = 'New password cannot be empty.';
-        } else if (!passwordRegex.test(passwordFields.newPassword)) {
-            errors.newPassword = 'Password must be at least 8 chars and include a letter, number, and special character.';
-        }
+    // 🔴 CHECK OLD PASSWORD
+    if (!passwordFields.oldPassword) {
+        errors.oldPassword = 'Old password cannot be empty.';
+    } else if (passwordFields.oldPassword !== user.password) {
+        errors.oldPassword = 'Old password does not match your current password.';
+    }
 
-        if (!passwordFields.confirmPassword) {
-            errors.confirmPassword = 'Confirm password cannot be empty.';
-        } else if (passwordFields.newPassword !== passwordFields.confirmPassword) {
-            errors.confirmPassword = 'New password and confirm password do not match.';
-        }
+    // 🔴 PASSWORD VALIDATION
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&]).{8,}$/;
 
-        if (Object.keys(errors).length > 0) {
-            setFormErrors(errors);
-            return;
-        }
+    if (!passwordFields.newPassword) {
+        errors.newPassword = 'New password cannot be empty.';
+    } else if (!passwordRegex.test(passwordFields.newPassword)) {
+        errors.newPassword = 'Password must be at least 8 chars and include a letter, number, and special character.';
+    }
 
-        setUserData(prev => ({ ...prev, passwordHash: passwordFields.newPassword }));
-        setIsPasswordModalOpen(false);
+    // 🔴 CONFIRM PASSWORD
+    if (!passwordFields.confirmPassword) {
+        errors.confirmPassword = 'Confirm password cannot be empty.';
+    } else if (passwordFields.newPassword !== passwordFields.confirmPassword) {
+        errors.confirmPassword = 'New password and confirm password do not match.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+        setFormErrors(errors);
+        return;
+    }
+
+    // 🔥 UPDATE LOCAL STORAGE PASSWORD
+    const updatedUser = {
+        ...user,
+        password: passwordFields.newPassword
     };
+
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+
+    // 🔥 UPDATE UI PASSWORD (optional)
+    setUserData(prev => ({
+        ...prev,
+        passwordHash: "********"
+    }));
+
+    alert("Password updated successfully ✅");
+
+    setIsPasswordModalOpen(false);
+};
 
     const handleCloseModal = () => {
         setIsEditModalOpen(false);
         setEditFormData(null);
         setFormErrors({});
     };
+
+    // 🔥 DELETE PROFILE FUNCTION
+const handleDeleteProfile = () => {
+    const confirmDelete = window.confirm("Are you sure you want to delete your profile?");
+
+    if (!confirmDelete) return;
+
+    // remove user from localStorage
+    localStorage.removeItem("user");
+    localStorage.removeItem("userId");
+
+    alert("Profile deleted successfully");
+
+    // redirect to login page
+    window.location.href = "/login";
+};
 
     const handleClosePasswordModal = () => {
         setIsPasswordModalOpen(false);
@@ -193,9 +269,11 @@ const UserProfile = () => {
                                     className="flex-1 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold py-2.5 rounded-lg border border-slate-300 shadow-sm transition-all hover:shadow">
                                     Edit Profile
                                 </button>
-                                <button className="flex-1 bg-white hover:bg-red-50 text-red-600 text-sm font-semibold py-2.5 rounded-lg border border-red-200 shadow-sm transition-all hover:border-red-300">
-                                    Delete Profile
-                                </button>
+                               <button 
+    onClick={handleDeleteProfile}
+    className="flex-1 bg-white hover:bg-red-50 text-red-600 text-sm font-semibold py-2.5 rounded-lg border border-red-200 shadow-sm transition-all hover:border-red-300">
+    Delete Profile
+</button>
                             </div>
                         </div>
                     </div>
@@ -336,11 +414,16 @@ const UserProfile = () => {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm Password</label>
                                 <input
-                                    type="password"
-                                    value={passwordFields.confirmPassword}
-                                    onChange={(e) => setPasswordFields(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
-                                />
+  type="password"
+  value={passwordFields.confirmPassword}
+  onChange={(e) =>
+    setPasswordFields(prev => ({
+      ...prev,
+      confirmPassword: e.target.value
+    }))
+  }
+  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+/>
                                 {formErrors.confirmPassword && <p className="text-sm text-red-500 mt-1.5">{formErrors.confirmPassword}</p>}
                             </div>
                         </div>

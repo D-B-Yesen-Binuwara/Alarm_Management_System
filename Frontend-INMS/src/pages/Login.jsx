@@ -11,8 +11,22 @@ function Login() {
 
     const user = JSON.parse(localStorage.getItem("user"));
 
-    if (user && user.email === email && user.password === password) {
+    // 🔥 FIXED LOGIN LOGIC
+    if (
+      (user && user.email === email && user.password === password) ||
+      (email === "admin" && password === "admin") // backend default user
+    ) {
       alert("Login success ✅");
+
+      // 🔥 IMPORTANT FIX
+      // if localStorage user exists → use its id
+      if (user && user.userId) {
+        localStorage.setItem("userId", user.userId);
+      } else {
+        // fallback → backend admin user
+        localStorage.setItem("userId", 1);
+      }
+
       navigate("/dashboard");
     } else {
       alert("Invalid login ❌");
@@ -22,6 +36,14 @@ function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <img
+            src="/sltmobitel-logo.png"
+            alt="SLTMobitel"
+            className="h-16 mx-auto mb-4 object-contain"
+          />
+        </div>
+
         {/* Login Form Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
           <h2 className="text-xl font-semibold text-slate-700 mb-6 text-center">
