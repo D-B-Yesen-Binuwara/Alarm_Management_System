@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 function RegionRegister({ onBack }) {
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,6 +21,7 @@ function RegionRegister({ onBack }) {
 
     const user = {
       fullName,
+      lastName,
       serviceId,
       email,
       password,

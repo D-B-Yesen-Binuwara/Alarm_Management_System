@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 function LeaRegister({ onBack }) {
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,6 +23,7 @@ function LeaRegister({ onBack }) {
 
     const user = {
       fullName,
+      lastName,
       serviceId,
       email,
       password,
