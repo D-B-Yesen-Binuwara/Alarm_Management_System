@@ -6,7 +6,7 @@ import AppRoutes from './routes/AppRoutes';
 // import './App.css';
 
 function AppContent() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true); // Changed default to true
   const location = useLocation();
   
   // Pages that should not show sidebar

@@ -1,15 +1,20 @@
 import { Link, useLocation } from 'react-router-dom';
 
+// Navbar component for top navigation bar
 const Navbar = ({ onToggle }) => {
+  // Get current location for conditional rendering
   const location = useLocation();
   
-  // Pages that should not show profile icon
+  // Define auth pages that hide profile icon
   const authPages = ['/login', '/register'];
+  // Check if current page is an auth page
   const isAuthPage = authPages.includes(location.pathname);
 
   return (
     <nav className="bg-gradient-to-r from-slate-900 via-sky-900 to-slate-800 text-white px-4 py-3 flex items-center justify-between shadow-md border-b border-emerald-400/40 flex-shrink-0 fixed top-0 left-0 right-0 z-50">
+      // Left side: toggle button, logo, title
       <div className="flex items-center gap-3">
+        // Sidebar toggle button
         <button
           onClick={onToggle}
           className="p-1.5 rounded hover:bg-white/10 transition text-white"
@@ -19,13 +24,17 @@ const Navbar = ({ onToggle }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        // Company logo
         <img src="/sltmobitel-logo.png" alt="SLTMobitel" className="h-10 w-auto object-contain" />
+        // System title
         <span className="text-lg font-bold tracking-wide text-white truncate">
           Integrated Network Management System
         </span>
       </div>
 
+      // Right side: profile link (if not auth page)
       {!isAuthPage && (
+        // Profile link
         <Link
           to="/profile"
           className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium text-sky-100 hover:bg-emerald-400/20 hover:text-white transition"
