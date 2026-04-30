@@ -69,10 +69,13 @@ public class UserService : IUserService
 
     public async Task Create(string username, string password, int roleId)
     {
+        PasswordHelper.CreatePasswordHash(password, out var hash, out var salt);
+
         var user = new User
         {
             Username = username,
-            PasswordHash = HashPassword(password),
+            PasswordHash = hash,
+            PasswordSalt = salt,
             RoleId = roleId
         };
 
@@ -91,10 +94,13 @@ public class UserService : IUserService
         var generatedUsername = GenerateUniqueUsername(dto.FirstName, dto.LastName);
 
         // Create user with generated username and a default hashed password
+        PasswordHelper.CreatePasswordHash("DefaultPassword123!", out var defaultHash, out var defaultSalt);
+
         var user = new User
         {
             Username = generatedUsername,
-            PasswordHash = HashPassword("DefaultPassword123!"), // Default password - should be changed by user
+            PasswordHash = defaultHash,
+            PasswordSalt = defaultSalt,
             FullName = fullName,
             RoleId = dto.RoleId,
             ServiceId = dto.ServiceId,
@@ -189,10 +195,18 @@ public class UserService : IUserService
         return allUsers.Any(u => u.Username.ToLower() == username.ToLower());
     }
 
-    private string HashPassword(string password)
+    public async Task ChangePassword(int userId, string currentPassword, string newPassword)
     {
-        using SHA256 sha = SHA256.Create();
-        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(bytes);
+        var user = await _repository.GetById(userId);
+        if (user == null) throw new Exception("User not found");
+
+        if (!PasswordHelper.VerifyPassword(currentPassword, user.PasswordSalt, user.PasswordHash))
+            throw new Exception("Invalid current password");
+
+        PasswordHelper.CreatePasswordHash(newPassword, out var newHash, out var newSalt);
+        user.PasswordHash = newHash;
+        user.PasswordSalt = newSalt;
+
+        await _repository.Update(user);
     }
 }

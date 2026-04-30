@@ -448,3 +448,8 @@ INSERT INTO Vendor (Name, Brand, DeviceType, Description, IsActive, CreatedAt) V
 SELECT * FROM Vendor;
 select * from Device;
 SELECT DeviceId, DeviceName, DeviceType, VendorId FROM Device;
+
+/* MIGRATION: Add PasswordSalt for PBKDF2 hashing ----------------------------------- */
+-- NULL allowed so legacy SHA-256 users (no salt) remain valid until next login
+IF COL_LENGTH('[User]', 'PasswordSalt') IS NULL
+    ALTER TABLE [User] ADD PasswordSalt NVARCHAR(255) NULL;

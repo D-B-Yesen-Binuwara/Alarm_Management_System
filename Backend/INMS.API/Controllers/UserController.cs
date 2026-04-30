@@ -44,4 +44,19 @@ public class UserController : ControllerBase
         await _service.Delete(id);
         return Ok();
     }
+
+    // Change a user's password
+    [HttpPatch("{id}/password")]
+    public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDto dto)
+    {
+        try
+        {
+            await _service.ChangePassword(id, dto.CurrentPassword, dto.NewPassword);
+            return Ok(new { message = "Password changed successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }

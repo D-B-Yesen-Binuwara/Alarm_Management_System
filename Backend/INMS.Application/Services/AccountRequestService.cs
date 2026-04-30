@@ -64,10 +64,13 @@ public class AccountRequestService : IAccountRequestService
         if (_context.Users.Any(u => u.Email == request.Email))
             throw new Exception("User already exists");
 
+        PasswordHelper.CreatePasswordHash(request.ServiceId ?? string.Empty, out var hash, out var salt);
+
         var user = new User
         {
             Username = request.Email,
-            PasswordHash = HashPassword(request.ServiceId),
+            PasswordHash = hash,
+            PasswordSalt = salt,
             FullName = request.FullName,
             Email = request.Email,
             ServiceId = request.ServiceId,
@@ -92,9 +95,5 @@ public class AccountRequestService : IAccountRequestService
         return true;
     }
 
-    private static string HashPassword(string password)
-    {
-        using var sha = SHA256.Create();
-        return Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(password)));
-    }
+    
 }

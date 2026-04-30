@@ -9,6 +9,7 @@ public interface IUserService
     Task<User> GetById(int id);
     Task Create(string username, string password, int roleId);
     Task CreateFromDto(CreateUserDto dto);
+    Task ChangePassword(int userId, string currentPassword, string newPassword);
     Task Update(int id, string username, int roleId);
     Task Delete(int id);
 }
