@@ -1,4 +1,5 @@
 using INMS.Application.Services;
+using INMS.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 
@@ -22,7 +23,7 @@ public class UserController : ControllerBase
         return Ok(await _service.GetAll());
     }
 
-    // ✅ Fetch a single user by ID - Returns proper JSON
+    // ✅ Fetch a single user by ID
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(int id)
     {
@@ -39,7 +40,7 @@ public class UserController : ControllerBase
         });
     }
 
-    // 🔹 Create a new user
+    // 🔥 CREATE USER (LOGIN REGISTER USE)
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
     {
@@ -50,7 +51,7 @@ public class UserController : ControllerBase
         return Ok(new { message = "User created successfully" });
     }
 
-    // ✅ Update user - Fixed to accept proper DTO and return updated user
+    // 🔥 UPDATE USER
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUserRequest request)
     {
@@ -61,7 +62,6 @@ public class UserController : ControllerBase
 
             await _service.Update(id, request.Username, request.RoleId);
 
-            // ✅ Return updated user data so frontend can sync
             var user = await _service.GetById(id);
             if (user == null)
                 return NotFound(new { error = "User not found" });
@@ -81,7 +81,7 @@ public class UserController : ControllerBase
         }
     }
 
-    // ✅ Update user password
+    // 🔥 UPDATE PASSWORD
     [HttpPut("{id}/password")]
     public async Task<IActionResult> UpdatePassword(int id, [FromBody] UpdatePasswordRequest request)
     {
@@ -91,11 +91,9 @@ public class UserController : ControllerBase
             if (user == null)
                 return NotFound(new { error = "User not found" });
 
-            // Verify old password
             if (user.PasswordHash != request.OldPassword)
                 return Unauthorized(new { error = "Invalid current password" });
 
-            // Update password (in production, use proper hashing like BCrypt)
             user.PasswordHash = request.NewPassword;
             await _service.Update(id, user.Username, user.Role?.RoleId ?? 1);
 
@@ -107,7 +105,7 @@ public class UserController : ControllerBase
         }
     }
 
-    // 🔹 Delete user
+    // 🔹 DELETE USER
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -122,7 +120,7 @@ public class UserController : ControllerBase
         }
     }
 
-    // 🔥🔥🔥 LOGIN API - Validates from database (NOT hardcoded)
+    // 🔥 LOGIN API
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
@@ -133,7 +131,6 @@ public class UserController : ControllerBase
 
             var users = await _service.GetAll();
 
-            // ✅ Filter by Username (not Email) - Database validation
             var user = users.FirstOrDefault(u =>
                 u.Username == request.Username &&
                 u.PasswordHash == request.Password);
@@ -156,7 +153,7 @@ public class UserController : ControllerBase
     }
 }
 
-// ✅ DTOs for proper request/response handling
+// ✅ DTOs
 public class LoginRequest
 {
     public string Username { get; set; }
