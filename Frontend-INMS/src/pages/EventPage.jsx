@@ -1,47 +1,159 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import AlarmService from "../services/AlarmService";
+import DeviceService from "../services/DeviceService";
+import EventLogService from "../services/EventLogService";
+import { formatDate, getDeviceTypeLabel } from "../utils/formatters";
+
+const normalizeEventValue = (value, fallback = "UNKNOWN") => {
+    const normalized = String(value ?? "").trim().toUpperCase();
+    return normalized || fallback;
+};
+
+const formatAlarmLabel = (alarmType) => {
+    const normalized = normalizeEventValue(alarmType, "");
+    return normalized ? normalized.replaceAll("_", " ") : "ALARM";
+};
+
+const getEventSeverity = (eventType, alarmType) => {
+    const normalizedEventType = normalizeEventValue(eventType);
+    const normalizedAlarmType = normalizeEventValue(alarmType, "");
+
+    if (normalizedAlarmType === "NODE_DOWN") return "CRITICAL";
+    if (normalizedEventType === "HEARTBEAT_TIMEOUT" || normalizedEventType === "NODE_DOWN") return "CRITICAL";
+
+    if (
+        normalizedAlarmType === "NODE_UNREACHABLE" ||
+        normalizedEventType === "SIMULATED_DOWN" ||
+        normalizedEventType === "ALARM_RAISED"
+    ) {
+        return "MAJOR";
+    }
+
+    if (
+        normalizedEventType === "HEARTBEAT_RECOVERED" ||
+        normalizedEventType === "ALARM_CLEARED" ||
+        normalizedEventType === "NODE_UP"
+    ) {
+        return "INFO";
+    }
+
+    return "NOTICE";
+};
+
+const getEventMessage = (eventType, alarmType, nodeName) => {
+    const normalizedEventType = normalizeEventValue(eventType);
+    const alarmLabel = formatAlarmLabel(alarmType);
+
+    switch (normalizedEventType) {
+        case "ALARM_RAISED":
+            return `${alarmLabel} raised for ${nodeName}`;
+        case "ALARM_CLEARED":
+            return `${alarmLabel} cleared for ${nodeName}`;
+        case "HEARTBEAT_TIMEOUT":
+            return `Heartbeat timeout detected for ${nodeName}`;
+        case "HEARTBEAT_RECOVERED":
+            return `Heartbeat recovered for ${nodeName}`;
+        case "SIMULATED_DOWN":
+            return `Simulation forced ${nodeName} into a down state`;
+        case "NODE_DOWN":
+            return `${nodeName} is down`;
+        case "NODE_UP":
+            return `${nodeName} is back online`;
+        default:
+            return `${normalizedEventType.replaceAll("_", " ")} recorded for ${nodeName}`;
+    }
+};
 
 const EventPage = () => {
     const [search, setSearch] = useState("");
     const [selectedNode, setSelectedNode] = useState("All");
     const [selectedDate, setSelectedDate] = useState(null);
+    const [events, setEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [lastRefreshed, setLastRefreshed] = useState(null);
 
-    const data = [
-        { time: "13/02/2026, 10:23:03", node: "CEAN-BLR-001", type: "CEAN", event: "ALARM_RAISED", officer: "John Silva", severity: "MAJOR", msg: "AC alarm raised" },
-        { time: "13/02/2026, 10:23:02", node: "CEAN-BLR-001", type: "CEAN", event: "ALARM_RAISED", officer: "John Silva", severity: "MAJOR", msg: "AC power failure" },
-        { time: "13/02/2026, 10:22:56", node: "CEAN-BLR-001", type: "CEAN", event: "NODE_DOWN", officer: "Mary Fernando", severity: "CRITICAL", msg: "Node DOWN" },
-        { time: "13/02/2026, 10:20:10", node: "SLBN-DEL-001", type: "SLBN", event: "NODE_DOWN", officer: "Kamal Perera", severity: "CRITICAL", msg: "Node DOWN" },
-        { time: "13/02/2026, 10:18:20", node: "SLBN-DEL-001", type: "SLBN", event: "NODE_UP", officer: "Kamal Perera", severity: "INFO", msg: "Node UP" },
-        { time: "13/02/2026, 10:15:05", node: "MSAN-BLR-001", type: "MSAN", event: "ALARM_RAISED", officer: "Nimal Silva", severity: "MAJOR", msg: "Temperature alert" },
-        { time: "13/02/2026, 10:14:00", node: "MSAN-BLR-001", type: "MSAN", event: "NODE_UP", officer: "Nimal Silva", severity: "INFO", msg: "Node UP" }
-    ];
+    useEffect(() => {
+        loadEventLogs();
+    }, []);
 
-    const nodes = ["All", ...new Set(data.map((d) => d.node))];
+    const loadEventLogs = async () => {
+        setLoading(true);
+        setError(null);
 
-    const filtered = data.filter((d) => {
-        const eventDate = new Date(d.time);
+        try {
+            const [eventRows, deviceRows, alarmRows] = await Promise.all([
+                EventLogService.getAll(),
+                DeviceService.getAll(),
+                AlarmService.getAll()
+            ]);
+
+            const deviceMap = new Map(deviceRows.map((device) => [device.deviceId, device]));
+            const alarmMap = new Map(alarmRows.map((alarm) => [alarm.alarmId, alarm]));
+
+            const mappedEvents = eventRows
+                .map((eventRow) => {
+                    const device = deviceMap.get(eventRow.deviceId);
+                    const alarm = eventRow.alarmId ? alarmMap.get(eventRow.alarmId) : null;
+                    const nodeName = device?.deviceName ?? `Device #${eventRow.deviceId}`;
+
+                    return {
+                        id: eventRow.eventId,
+                        timestamp: eventRow.eventTime,
+                        timeLabel: formatDate(eventRow.eventTime),
+                        node: nodeName,
+                        type: getDeviceTypeLabel(device?.deviceType ?? "Unknown"),
+                        event: normalizeEventValue(eventRow.eventType),
+                        officer: device?.assignedUserFullName ?? "Unassigned",
+                        severity: getEventSeverity(eventRow.eventType, alarm?.alarmType),
+                        msg: getEventMessage(eventRow.eventType, alarm?.alarmType, nodeName)
+                    };
+                })
+                .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
+
+            setEvents(mappedEvents);
+            setLastRefreshed(new Date());
+        } catch (err) {
+            console.error(err);
+            setError("Failed to load event logs. Please make sure the backend API is running.");
+            setEvents([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const nodes = ["All", ...new Set(events.map((event) => event.node))];
+
+    const filtered = events.filter((event) => {
+        const eventDate = new Date(event.timestamp);
+        const searchTerm = search.trim().toLowerCase();
 
         return (
-            (selectedNode === "All" || d.node === selectedNode) &&
-            (d.node.toLowerCase().includes(search.toLowerCase()) ||
-             d.msg.toLowerCase().includes(search.toLowerCase())) &&
-            (!selectedDate ||
-             eventDate.toDateString() === selectedDate.toDateString())
+            (selectedNode === "All" || event.node === selectedNode) &&
+            (
+                !searchTerm ||
+                event.node.toLowerCase().includes(searchTerm) ||
+                event.msg.toLowerCase().includes(searchTerm) ||
+                event.event.toLowerCase().includes(searchTerm) ||
+                event.officer.toLowerCase().includes(searchTerm)
+            ) &&
+            (!selectedDate || eventDate.toDateString() === selectedDate.toDateString())
         );
     });
 
-    const getSeverityRowClass = (sev) => {
-        if (sev === "CRITICAL") return "hover:bg-red-50";
-        if (sev === "MAJOR") return "hover:bg-yellow-50";
-        if (sev === "INFO") return "hover:bg-blue-50";
+    const getSeverityRowClass = (severity) => {
+        if (severity === "CRITICAL") return "hover:bg-red-50";
+        if (severity === "MAJOR") return "hover:bg-yellow-50";
+        if (severity === "INFO") return "hover:bg-blue-50";
         return "hover:bg-gray-50";
     };
 
-    const getSeverityBadge = (sev) => {
-        if (sev === "CRITICAL") return "bg-red-600 text-white";
-        if (sev === "MAJOR") return "bg-yellow-600 text-white";
-        if (sev === "INFO") return "bg-blue-600 text-white";
+    const getSeverityBadge = (severity) => {
+        if (severity === "CRITICAL") return "bg-red-600 text-white";
+        if (severity === "MAJOR") return "bg-yellow-600 text-white";
+        if (severity === "INFO") return "bg-blue-600 text-white";
         return "bg-gray-500 text-white";
     };
 
@@ -56,6 +168,12 @@ const EventPage = () => {
                 </p>
             </div>
 
+            {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+
             <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center">
                     <select
@@ -63,35 +181,41 @@ const EventPage = () => {
                         onChange={(e) => setSelectedNode(e.target.value)}
                         className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                        {nodes.map((n, i) => (
-                            <option key={i} value={n}>{n}</option>
+                        {nodes.map((nodeName) => (
+                            <option key={nodeName} value={nodeName}>{nodeName}</option>
                         ))}
                     </select>
 
-                    <div className="flex flex-1 items-center overflow-hidden rounded-lg border border-gray-300">
+                    <div className="flex flex-1 items-center overflow-hidden rounded-lg border border-gray-300 bg-white">
                         <input
                             type="text"
-                            placeholder="Search node or message..."
+                            placeholder="Search node, message, event, or officer..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="flex-1 px-3 py-2 text-sm focus:outline-none"
                         />
 
-                        <button className="bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
-                            Search
+                        <button
+                            type="button"
+                            onClick={loadEventLogs}
+                            className="bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                        >
+                            Refresh
                         </button>
                     </div>
 
-                    <div className="relative flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         <DatePicker
                             selected={selectedDate}
                             onChange={(date) => setSelectedDate(date)}
-                            placeholderText="📅"
-                            className="h-10 w-10 cursor-pointer rounded-lg border border-gray-300 text-center hover:bg-gray-50"
+                            placeholderText="Filter by date"
+                            dateFormat="dd/MM/yyyy"
+                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             popperPlacement="bottom-start"
                         />
 
                         <button
+                            type="button"
                             onClick={() => setSelectedDate(null)}
                             className="text-xs text-blue-600 hover:underline"
                         >
@@ -103,10 +227,16 @@ const EventPage = () => {
 
             <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
                 <div className="border-b border-gray-200 p-4">
-                    <h2 className="text-base font-semibold text-gray-700">
-                        Events ({filtered.length}) 
-                        
-                    </h2>
+                    <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                        <h2 className="text-base font-semibold text-gray-700">
+                            Events ({filtered.length})
+                        </h2>
+                        {lastRefreshed && (
+                            <p className="text-xs text-gray-400">
+                                Last refreshed: {formatDate(lastRefreshed.toISOString())}
+                            </p>
+                        )}
+                    </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -124,37 +254,43 @@ const EventPage = () => {
                         </thead>
 
                         <tbody>
-                            {filtered.length === 0 ? (
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
+                                        Loading event logs...
+                                    </td>
+                                </tr>
+                            ) : filtered.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
                                         No events found.
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((d, i) => (
+                                filtered.map((event) => (
                                     <tr
-                                        key={i}
-                                        className={`border-b border-gray-100 transition ${getSeverityRowClass(d.severity)}`}
+                                        key={event.id}
+                                        className={`border-b border-gray-100 transition ${getSeverityRowClass(event.severity)}`}
                                     >
-                                        <td className="px-4 py-3 font-mono text-xs text-gray-600">{d.time}</td>
-                                        <td className="px-4 py-3 font-medium text-gray-800">{d.node}</td>
+                                        <td className="px-4 py-3 font-mono text-xs text-gray-600">{event.timeLabel}</td>
+                                        <td className="px-4 py-3 font-medium text-gray-800">{event.node}</td>
                                         <td className="px-4 py-3">
                                             <span className="rounded bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700">
-                                                {d.type}
+                                                {event.type}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">
-                                                {d.event}
+                                                {event.event}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-gray-600">{d.officer}</td>
+                                        <td className="px-4 py-3 text-gray-600">{event.officer}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`rounded px-3 py-1 text-xs font-semibold ${getSeverityBadge(d.severity)}`}>
-                                                {d.severity}
+                                            <span className={`rounded px-3 py-1 text-xs font-semibold ${getSeverityBadge(event.severity)}`}>
+                                                {event.severity}
                                             </span>
                                         </td>
-                                        <td className="max-w-xs truncate px-4 py-3 text-gray-600">{d.msg}</td>
+                                        <td className="max-w-md px-4 py-3 text-gray-600">{event.msg}</td>
                                     </tr>
                                 ))
                             )}
