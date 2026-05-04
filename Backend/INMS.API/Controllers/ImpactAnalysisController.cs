@@ -66,9 +66,7 @@ public class ImpactAnalysisController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Retrieves the latest impact analysis result for a device.
-    /// </summary>
+    // Retrieves the latest impact analysis result for a device.
     [HttpGet("result/{deviceId:int}")]
     public async Task<IActionResult> GetResult(int deviceId)
     {
@@ -81,9 +79,7 @@ public class ImpactAnalysisController : ControllerBase
         return Ok(await BuildResultAsync(deviceId));
     }
 
-    /// <summary>
-    /// Builds the response object containing device, root cause, and impacted devices with full details.
-    /// </summary>
+    // Builds the response object containing device, root cause, and impacted devices with full details.
     private async Task<object> BuildResultAsync(int deviceId)
     {
         var device = await _context.Devices
@@ -180,9 +176,7 @@ public class ImpactAnalysisController : ControllerBase
         };
     }
 
-    /// <summary>
-    /// Updates the status of a device using the DeviceStatus enum.
-    /// </summary>
+    // Updates the status of a device using the DeviceStatus enum.
     private async Task<bool> SetDeviceStatusAsync(int deviceId, DeviceStatus status)
     {
         var result = await _deviceService.UpdateStatusAsync(deviceId, status);
