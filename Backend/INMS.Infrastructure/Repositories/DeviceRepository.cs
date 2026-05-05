@@ -70,4 +70,11 @@ public class DeviceRepository : IDeviceRepository
             .Select(x => x.Device)
             .ToListAsync();
     }
+
+    public async Task<List<Device>> GetDevicesByDeviceTypeAsync(INMS.Domain.Enums.DeviceType deviceType)
+    {
+        return await _context.Devices
+            .Where(d => d.DeviceType == deviceType)
+            .ToListAsync();
+    }
 }

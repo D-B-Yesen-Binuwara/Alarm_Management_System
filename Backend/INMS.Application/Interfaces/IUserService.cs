@@ -9,6 +9,6 @@ public interface IUserService
     Task<User> GetById(int id);
     Task Create(string username, string password, int roleId);
     Task CreateFromDto(CreateUserDto dto);
-    Task Update(int id, string username, int roleId);
+    Task Update(int id, string username, int roleId, INMS.Domain.Enums.DeviceType? layer = null);
     Task Delete(int id);
 }

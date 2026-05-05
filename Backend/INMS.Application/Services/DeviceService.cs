@@ -30,14 +30,28 @@ namespace INMS.Application.Services
             _impactAnalysisService = impactAnalysisService;
         }
 
-        public async Task<IEnumerable<Device>> GetAllAsync()
+        public async Task<IEnumerable<Device>> GetAllAsync(int? callerUserId = null)
         {
+            var (role, layer) = await ResolveCallerAsync(callerUserId);
+
+            if (!string.IsNullOrEmpty(role) && role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue)
+            {
+                return await _device_repository_GetAllFilteredByLayer(layer.Value);
+            }
+
             return await _deviceRepository.GetAllAsync();
         }
 
-        public async Task<IEnumerable<DeviceListDto>> GetAllForDashboardAsync()
+        // helper to avoid loading everything into memory in callers that can use repository filtering later
+        private async Task<IEnumerable<Device>> _device_repository_GetAllFilteredByLayer(Domain.Enums.DeviceType layer)
         {
-            var rows = await _context.Devices
+            return await _deviceRepository.GetDevicesByDeviceTypeAsync(layer);
+        }
+
+        public async Task<IEnumerable<DeviceListDto>> GetAllForDashboardAsync(int? callerUserId = null)
+        {
+            var (role, layer) = await ResolveCallerAsync(callerUserId);
+            var query = _context.Devices
                 .AsNoTracking()
                 .Join(_context.LEAs.AsNoTracking(),
                     d => d.LEAId,
@@ -54,7 +68,14 @@ namespace INMS.Application.Services
                 .GroupJoin(_context.Users.AsNoTracking(),
                     dlpr => dlpr.Device.AssignedUserId,
                     u => u.UserId,
-                    (dlpr, users) => new { dlpr.Device, dlpr.Lea, dlpr.Province, dlpr.Region, Users = users })
+                    (dlpr, users) => new { dlpr.Device, dlpr.Lea, dlpr.Province, dlpr.Region, Users = users });
+
+            if (!string.IsNullOrEmpty(role) && role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue)
+            {
+                query = query.Where(x => x.Device.DeviceType == layer.Value);
+            }
+
+            var rows = await query
                 .SelectMany(
                     x => x.Users.DefaultIfEmpty(),
                     (x, u) => new DeviceListDto(
@@ -80,9 +101,11 @@ namespace INMS.Application.Services
             return rows;
         }
 
-        public async Task<IEnumerable<DeviceMapDto>> GetDevicesForMapAsync()
+        public async Task<IEnumerable<DeviceMapDto>> GetDevicesForMapAsync(int? callerUserId = null)
         {
-            var devices = await _context.Devices
+            var (role, layer) = await ResolveCallerAsync(callerUserId);
+
+            var devicesQuery = _context.Devices
                 .AsNoTracking()
                 .Select(d => new
                 {
@@ -92,11 +115,20 @@ namespace INMS.Application.Services
                     d.Latitude,
                     d.Longitude,
                     d.Status
-                })
-                .ToListAsync();
+                });
+
+            if (!string.IsNullOrEmpty(role) && role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue)
+            {
+                devicesQuery = devicesQuery.Where(d => d.DeviceType == layer.Value);
+            }
+
+            var devices = await devicesQuery.ToListAsync();
+
+            var deviceIds = devices.Select(d => d.DeviceId).ToHashSet();
 
             var links = await _context.DeviceLinks
                 .AsNoTracking()
+                .Where(l => deviceIds.Contains(l.ParentDeviceId) || deviceIds.Contains(l.ChildDeviceId))
                 .Select(l => new { l.ParentDeviceId, l.ChildDeviceId })
                 .ToListAsync();
 
@@ -145,7 +177,7 @@ namespace INMS.Application.Services
                 }
             }
 
-            return devices.Select(d => new DeviceMapDto(
+            var mapped = devices.Select(d => new DeviceMapDto(
                 d.DeviceId,
                 d.DeviceName,
                 d.DeviceType.ToString(),
@@ -154,12 +186,52 @@ namespace INMS.Application.Services
                 d.Status.ToString(),
                 d.Status == DeviceStatus.DOWN ? 0 : (impactedByDownRoots.Contains(d.DeviceId) ? 1 : 0)
             ));
+
+            if (!string.IsNullOrEmpty(role) && role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue)
+            {
+                mapped = mapped.Where(m => Enum.TryParse<Domain.Enums.DeviceType>(m.DeviceType, out var dt) && dt == layer.Value);
+            }
+
+            return mapped;
         }
 
-        public async Task<Device?> GetByIdAsync(int id) => await _deviceRepository.GetByIdAsync(id);
-
-        public async Task<Device> CreateAsync(CreateDeviceDto dto)
+        // Resolve caller's role and layer from DB when callerUserId provided
+        private async Task<(string role, Domain.Enums.DeviceType? layer)> ResolveCallerAsync(int? callerUserId)
         {
+            if (!callerUserId.HasValue) return (string.Empty, null);
+            var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.UserId == callerUserId.Value);
+            if (user == null) return (string.Empty, null);
+            return (user.Role?.RoleName ?? string.Empty, user.Layer);
+        }
+
+        public async Task<Device?> GetByIdAsync(int id, int? callerUserId = null)
+        {
+            var device = await _deviceRepository.GetByIdAsync(id);
+            if (!callerUserId.HasValue) return device;
+
+            var (role, layer) = await ResolveCallerAsync(callerUserId);
+            if (string.IsNullOrEmpty(role)) return device;
+            if (role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase)) return device;
+            if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue && device != null && device.DeviceType != layer.Value)
+            {
+                throw new UnauthorizedAccessException("Caller not permitted to access this device");
+            }
+
+            return device;
+        }
+
+        public async Task<Device> CreateAsync(CreateDeviceDto dto, int? callerUserId = null)
+        {
+            if (callerUserId.HasValue)
+            {
+                var (role, layer) = await ResolveCallerAsync(callerUserId);
+                if (!string.IsNullOrEmpty(role) && !role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue && dto.DeviceType != layer.Value)
+                        throw new UnauthorizedAccessException("Caller cannot create devices outside their layer");
+                }
+            }
+
             var device = new Device
             {
                 DeviceName = dto.DeviceName,
@@ -177,10 +249,22 @@ namespace INMS.Application.Services
             return device;
         }
 
-        public async Task<Device?> UpdateAsync(int id, UpdateDeviceDto dto)
+        public async Task<Device?> UpdateAsync(int id, UpdateDeviceDto dto, int? callerUserId = null)
         {
             var existing = await _deviceRepository.GetByIdAsync(id);
             if (existing == null) return null;
+
+            if (callerUserId.HasValue)
+            {
+                var (role, layer) = await ResolveCallerAsync(callerUserId);
+                if (!string.IsNullOrEmpty(role) && !role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue && existing.DeviceType != layer.Value)
+                        throw new UnauthorizedAccessException("Caller cannot update this device");
+                    if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue && dto.DeviceType != layer.Value)
+                        throw new UnauthorizedAccessException("Caller cannot change device layer");
+                }
+            }
 
             existing.DeviceName = dto.DeviceName;
             existing.DeviceType = dto.DeviceType;
@@ -196,10 +280,20 @@ namespace INMS.Application.Services
             return existing;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, int? callerUserId = null)
         {
             var device = await _deviceRepository.GetByIdAsync(id);
             if (device == null) return false;
+
+            if (callerUserId.HasValue)
+            {
+                var (role, layer) = await ResolveCallerAsync(callerUserId);
+                if (!string.IsNullOrEmpty(role) && !role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue && device.DeviceType != layer.Value)
+                        throw new UnauthorizedAccessException("Caller cannot delete this device");
+                }
+            }
 
             // 1. Delete associated logs perfectly without memory overhead
             await _context.Heartbeats.Where(h => h.DeviceId == id).ExecuteDeleteAsync();
@@ -238,10 +332,20 @@ namespace INMS.Application.Services
             return true;
         }
 
-        public async Task AssignDeviceAsync(int deviceId, int userId)
+        public async Task AssignDeviceAsync(int deviceId, int userId, int? callerUserId = null)
         {
             var device = await _context.Devices.FindAsync(deviceId);
             if (device == null) throw new Exception("Device not found");
+
+            if (callerUserId.HasValue)
+            {
+                var (role, layer) = await ResolveCallerAsync(callerUserId);
+                if (!string.IsNullOrEmpty(role) && !role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue && device.DeviceType != layer.Value)
+                        throw new UnauthorizedAccessException("Caller cannot assign this device");
+                }
+            }
 
             var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
             if (!userExists) throw new Exception("User not found");
@@ -260,15 +364,26 @@ namespace INMS.Application.Services
             return assignment.AreaType switch
             {
                 "LEA"      => await _deviceRepository.GetDevicesByLeaAsync(assignment.AreaId),
-                "Province" => await _deviceRepository.GetDevicesByProvinceAsync(assignment.AreaId),
-                "Region"   => await _deviceRepository.GetDevicesByRegionAsync(assignment.AreaId),
+                "Province" => await _device_repository.GetDevicesByProvinceAsync(assignment.AreaId),
+                "Region"   => await _device_repository.GetDevicesByRegionAsync(assignment.AreaId),
                 _          => new List<Device>()
             };
         }
-        public async Task<Device?> UpdateStatusAsync(int id, DeviceStatus status)
+
+        public async Task<Device?> UpdateStatusAsync(int id, DeviceStatus status, int? callerUserId = null)
         {
             var device = await _context.Devices.FindAsync(id);
             if (device == null) return null;
+
+            if (callerUserId.HasValue)
+            {
+                var (role, layer) = await ResolveCallerAsync(callerUserId);
+                if (!string.IsNullOrEmpty(role) && !role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue && device.DeviceType != layer.Value)
+                        throw new UnauthorizedAccessException("Caller cannot update status of this device");
+                }
+            }
 
             var previous = device.Status;
             device.Status = status;
@@ -284,10 +399,20 @@ namespace INMS.Application.Services
             return device;
         }
 
-        public async Task<Device?> SetSimulationStateAsync(int id, bool isSimulatedDown)
+        public async Task<Device?> SetSimulationStateAsync(int id, bool isSimulatedDown, int? callerUserId = null)
         {
             var device = await _context.Devices.FindAsync(id);
             if (device == null) return null;
+
+            if (callerUserId.HasValue)
+            {
+                var (role, layer) = await ResolveCallerAsync(callerUserId);
+                if (!string.IsNullOrEmpty(role) && !role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) && layer.HasValue && device.DeviceType != layer.Value)
+                        throw new UnauthorizedAccessException("Caller cannot change simulation state for this device");
+                }
+            }
 
             // Simulation should only stop heartbeat emission. Do NOT force immediate Status change
             // or trigger propagation here. The background detector will observe missing heartbeats

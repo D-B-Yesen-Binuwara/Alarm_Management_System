@@ -200,6 +200,7 @@ INSERT INTO LEA (Name, ProvinceId) VALUES
 
 -- Roles
 INSERT INTO Role (Name) VALUES 
+('SuperAdmin'),
 ('Admin'),
 ('Region Officer'),
 ('Province Officer'),
@@ -214,6 +215,7 @@ INSERT INTO [User] (Username, PasswordHash, FullName, RoleId) VALUES
 ('admin', 'hash123', 'System Admin', 1),
 ('officer1', 'hash456', 'John Silva', 4),
 ('officer2', 'hash789', 'Mary Fernando', 4);
+
 
 -- Devices (SLBN → CEAN → MSAN hierarchy)
 INSERT INTO Device (DeviceName, DeviceType, IP, Status, PriorityLevel, LEAId, AssignedUserId) VALUES
@@ -391,6 +393,7 @@ WHERE TABLE_NAME = 'User';
 ALTER TABLE SimulationEvent
 ADD AlarmId INT NULL;
 
+
 /* CLEANUP: Remove FirstName/LastName if they were added accidentally in previous runs */
 IF COL_LENGTH('User', 'FirstName') IS NOT NULL ALTER TABLE [User] DROP COLUMN FirstName;
 IF COL_LENGTH('User', 'LastName') IS NOT NULL ALTER TABLE [User] DROP COLUMN LastName;
@@ -448,3 +451,50 @@ INSERT INTO Vendor (Name, Brand, DeviceType, Description, IsActive, CreatedAt) V
 SELECT * FROM Vendor;
 select * from Device;
 SELECT DeviceId, DeviceName, DeviceType, VendorId FROM Device;
+
+-- ===========================================================================================
+-- DB changes moved here (edited 2026-05-05)
+-- Use idempotent checks so running multiple times is safe
+
+USE INMS_SLT;
+
+-- Add Layer column to User to store user's device layer (e.g., SLBN, CEAN, MSAN)
+IF COL_LENGTH('dbo.[User]', 'Layer') IS NULL
+BEGIN
+    ALTER TABLE dbo.[User] ADD [Layer] NVARCHAR(50) NULL;
+END
+
+-- Optional example: set Layer for an existing user
+-- UPDATE dbo.[User] SET [Layer] = 'SLBN' WHERE Username = 'officer1';
+
+-- Add AlarmId to SimulationEvent if missing
+IF COL_LENGTH('dbo.SimulationEvent', 'AlarmId') IS NULL
+BEGIN
+    ALTER TABLE dbo.SimulationEvent ADD AlarmId INT NULL;
+END
+
+-- End of DB changes block
+
+
+-- Enforce Layer values and add index (idempotent)
+-- NOTE: backend uses 'CEAN' as the canonical name for the exchange layer.
+-- If you prefer 'CEA' instead, update backend enums and references first.
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.check_constraints cc
+    WHERE cc.name = 'CK_User_Layer' AND cc.parent_object_id = OBJECT_ID('dbo.[User]')
+)
+BEGIN
+    ALTER TABLE dbo.[User]
+    ADD CONSTRAINT CK_User_Layer
+    CHECK (Layer IN ('SLBN', 'CEAN', 'MSAN') OR Layer IS NULL);
+END
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes i
+    WHERE i.name = 'IX_User_Layer' AND i.object_id = OBJECT_ID('dbo.[User]')
+)
+BEGIN
+    CREATE INDEX IX_User_Layer ON dbo.[User](Layer);
+END
+

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using INMS.Application.DTOs;
 using INMS.Application.Interfaces;
 using INMS.Domain.Enums;
+using System.Linq;
 
 namespace INMS.API.Controllers
 {
@@ -10,17 +11,30 @@ namespace INMS.API.Controllers
     public class DeviceController : ControllerBase
     {
         private readonly IDeviceService _deviceService;
+        private readonly INMS.Domain.Interfaces.IUserRepository _userRepository;
 
-        public DeviceController(IDeviceService deviceService)
+        public DeviceController(IDeviceService deviceService, INMS.Domain.Interfaces.IUserRepository userRepository)
         {
             _deviceService = deviceService;
+            _userRepository = userRepository;
+        }
+
+        // Caller id helper
+
+        private int? GetCallerUserIdFromHeader()
+        {
+            var idHeader = HttpContext.Request.Headers["X-User-Id"].FirstOrDefault();
+            if (string.IsNullOrEmpty(idHeader) || !int.TryParse(idHeader, out var userId))
+                return null;
+            return userId;
         }
 
         // Fetch all devices
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var devices = await _deviceService.GetAllForDashboardAsync();
+            var callerId = GetCallerUserIdFromHeader();
+            var devices = await _deviceService.GetAllForDashboardAsync(callerId);
             return Ok(devices);
         }
 
@@ -34,69 +48,127 @@ namespace INMS.API.Controllers
 
         // Fetch all devices with map coordinates and impact state
         [HttpGet("map")]
-        public async Task<IActionResult> GetMapData() => Ok(await _deviceService.GetDevicesForMapAsync());
+        public async Task<IActionResult> GetMapData()
+        {
+            var callerId = GetCallerUserIdFromHeader();
+            return Ok(await _deviceService.GetDevicesForMapAsync(callerId));
+        }
 
         // Fetch a single device by ID
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var device = await _deviceService.GetByIdAsync(id);
-            if (device == null) return NotFound();
-            return Ok(device);
+            var callerId = GetCallerUserIdFromHeader();
+            try
+            {
+                var device = await _deviceService.GetByIdAsync(id, callerId);
+                if (device == null) return NotFound();
+                return Ok(device);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         // Create a new device
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateDeviceDto dto)
         {
-            var created = await _deviceService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.DeviceId }, created);
+            var callerId = GetCallerUserIdFromHeader();
+            try
+            {
+                var created = await _deviceService.CreateAsync(dto, callerId);
+                return CreatedAtAction(nameof(GetById), new { id = created.DeviceId }, created);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         // Update an existing device by ID
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateDeviceDto dto)
         {
-            var updated = await _deviceService.UpdateAsync(id, dto);
-            if (updated == null) return NotFound();
-            return Ok(updated);
+            var callerId = GetCallerUserIdFromHeader();
+            try
+            {
+                var updated = await _deviceService.UpdateAsync(id, dto, callerId);
+                if (updated == null) return NotFound();
+                return Ok(updated);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         // Delete a device by ID
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var deleted = await _deviceService.DeleteAsync(id);
-            if (!deleted) return NotFound();
-            return NoContent();
+            var callerId = GetCallerUserIdFromHeader();
+            try
+            {
+                var deleted = await _deviceService.DeleteAsync(id, callerId);
+                if (!deleted) return NotFound();
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         // Assign a device to a user
         [HttpPatch("{id:int}/assign")]
         public async Task<IActionResult> AssignDevice(int id, [FromBody] AssignDeviceRequest request)
         {
-            await _deviceService.AssignDeviceAsync(id, request.UserId);
-            return Ok("Device assigned successfully");
+            var callerId = GetCallerUserIdFromHeader();
+            try
+            {
+                await _deviceService.AssignDeviceAsync(id, request.UserId, callerId);
+                return Ok("Device assigned successfully");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         // Simulate a device failure and trigger downstream impact propagation
         [HttpPost("{id}/simulate-failure")]
         public async Task<IActionResult> SimulateFailure(int id)
         {
-            var updated = await _deviceService.SetSimulationStateAsync(id, true);
-            if (updated == null) return NotFound();
-
-            return Ok(new { message = "Device failure simulation started", deviceId = id });
+            var callerId = GetCallerUserIdFromHeader();
+            try
+            {
+                var updated = await _deviceService.SetSimulationStateAsync(id, true, callerId);
+                if (updated == null) return NotFound();
+                return Ok(new { message = "Device failure simulation started", deviceId = id });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         // Recover a simulated device failure and restore its status
         [HttpPost("{id}/recover")]
         public async Task<IActionResult> Recover(int id)
         {
-            var updated = await _deviceService.SetSimulationStateAsync(id, false);
-            if (updated == null) return NotFound();
-
-            return Ok(new { message = "Device recovery simulation started", deviceId = id });
+            var callerId = GetCallerUserIdFromHeader();
+            try
+            {
+                var updated = await _deviceService.SetSimulationStateAsync(id, false, callerId);
+                if (updated == null) return NotFound();
+                return Ok(new { message = "Device recovery simulation started", deviceId = id });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         public class AssignDeviceRequest
@@ -108,9 +180,17 @@ namespace INMS.API.Controllers
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest request)
         {
-            var updated = await _deviceService.UpdateStatusAsync(id, request.Status);
-            if (updated == null) return NotFound();
-            return Ok(updated);
+            var callerId = GetCallerUserIdFromHeader();
+            try
+            {
+                var updated = await _deviceService.UpdateStatusAsync(id, request.Status, callerId);
+                if (updated == null) return NotFound();
+                return Ok(updated);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
     }
 

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using INMS.Domain.Enums;
 
 namespace INMS.Domain.Entities;
 
@@ -25,4 +26,6 @@ public class User
 
     public int RoleId { get; set; }
     public Role? Role { get; set; }
+    // Optional layer assigned to the user (e.g., SLBN, CEAN, MSAN)
+    public DeviceType? Layer { get; set; }
 }

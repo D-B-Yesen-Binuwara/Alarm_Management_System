@@ -50,6 +50,10 @@ public class AppDbContext : DbContext
             .Property(d => d.Status)
             .HasConversion<string>();
 
+        modelBuilder.Entity<User>()
+            .Property(u => u.Layer)
+            .HasConversion<string>();
+
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<Device>()

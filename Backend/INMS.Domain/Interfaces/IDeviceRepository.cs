@@ -1,4 +1,5 @@
 using INMS.Domain.Entities;
+using INMS.Domain.Enums;
 
 namespace INMS.Domain.Interfaces;
 
@@ -11,4 +12,5 @@ public interface IDeviceRepository
     Task<List<Device>> GetDevicesByLeaAsync(int leaId);
     Task<List<Device>> GetDevicesByProvinceAsync(int provinceId);
     Task<List<Device>> GetDevicesByRegionAsync(int regionId);
+    Task<List<Device>> GetDevicesByDeviceTypeAsync(DeviceType deviceType);
 }

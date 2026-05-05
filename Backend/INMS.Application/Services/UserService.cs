@@ -52,6 +52,7 @@ public class UserService : IUserService
                 user.FullName,
                 user.RoleId,
                 user.Role?.RoleName,
+                user.Layer,
                 user.ServiceId,
                 user.Email,
                 regionId.HasValue && regions.TryGetValue(regionId.Value, out var rName) ? rName : null,
@@ -97,6 +98,7 @@ public class UserService : IUserService
             PasswordHash = HashPassword("DefaultPassword123!"), // Default password - should be changed by user
             FullName = fullName,
             RoleId = dto.RoleId,
+            Layer = dto.Layer,
             ServiceId = dto.ServiceId,
             Email = dto.Email
         };
@@ -120,12 +122,13 @@ public class UserService : IUserService
         }
     }
 
-    public async Task Update(int id, string username, int roleId)
+    public async Task Update(int id, string username, int roleId, INMS.Domain.Enums.DeviceType? layer = null)
     {
         var user = await _repository.GetById(id);
 
         user!.Username = username;
         user.RoleId = roleId;
+        user.Layer = layer;
 
         await _repository.Update(user);
     }

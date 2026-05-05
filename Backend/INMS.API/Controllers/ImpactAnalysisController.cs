@@ -161,7 +161,8 @@ public class ImpactAnalysisController : ControllerBase
     [HttpPost("analyze/{deviceId:int}")]
     public async Task<IActionResult> Analyze(int deviceId)
     {
-        var updated = await SetDeviceStatusAsync(deviceId, DeviceStatus.DOWN);
+        var callerId = GetCallerUserIdFromHeader();
+        var updated = await SetDeviceStatusAsync(deviceId, DeviceStatus.DOWN, callerId);
         if (!updated)
         {
             return NotFound($"Device with ID {deviceId} not found.");
@@ -177,7 +178,8 @@ public class ImpactAnalysisController : ControllerBase
     [HttpPost("clear/{deviceId:int}")]
     public async Task<IActionResult> Clear(int deviceId)
     {
-        var updated = await SetDeviceStatusAsync(deviceId, DeviceStatus.UP);
+        var callerId = GetCallerUserIdFromHeader();
+        var updated = await SetDeviceStatusAsync(deviceId, DeviceStatus.UP, callerId);
         if (!updated)
         {
             return NotFound($"Device with ID {deviceId} not found.");
@@ -193,7 +195,8 @@ public class ImpactAnalysisController : ControllerBase
     [HttpGet("result/{deviceId:int}")]
     public async Task<IActionResult> GetResult(int deviceId)
     {
-        var device = await _deviceService.GetByIdAsync(deviceId);
+        var callerId = GetCallerUserIdFromHeader();
+        var device = await _deviceService.GetByIdAsync(deviceId, callerId);
         if (device == null)
         {
             return NotFound($"Device with ID {deviceId} not found.");
@@ -267,9 +270,17 @@ public class ImpactAnalysisController : ControllerBase
     /// <summary>
     /// Updates the status of a device using the DeviceStatus enum.
     /// </summary>
-    private async Task<bool> SetDeviceStatusAsync(int deviceId, DeviceStatus status)
+    private async Task<bool> SetDeviceStatusAsync(int deviceId, DeviceStatus status, int? callerUserId)
     {
-        var result = await _deviceService.UpdateStatusAsync(deviceId, status);
+        var result = await _deviceService.UpdateStatusAsync(deviceId, status, callerUserId);
         return result != null;
+    }
+
+    private int? GetCallerUserIdFromHeader()
+    {
+        var idHeader = HttpContext.Request.Headers["X-User-Id"].FirstOrDefault();
+        if (string.IsNullOrEmpty(idHeader) || !int.TryParse(idHeader, out var userId))
+            return null;
+        return userId;
     }
 }

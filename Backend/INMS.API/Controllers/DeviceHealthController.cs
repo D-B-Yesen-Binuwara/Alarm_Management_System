@@ -20,7 +20,8 @@ public class DeviceHealthController : ControllerBase
     [HttpGet("{id}/health")]
     public async Task<IActionResult> GetDeviceHealth(int id)
     {
-        var device = await _deviceService.GetByIdAsync(id);
+        var callerId = GetCallerUserIdFromHeader();
+        var device = await _deviceService.GetByIdAsync(id, callerId);
         if (device == null) return NotFound();
 
         var latestHeartbeat = await _heartbeatService.GetLatestHeartbeatAsync(id);
@@ -44,7 +45,8 @@ public class DeviceHealthController : ControllerBase
     [HttpGet("health/summary")]
     public async Task<IActionResult> GetHealthSummary()
     {
-        var devices = await _deviceService.GetAllAsync();
+        var callerId = GetCallerUserIdFromHeader();
+        var devices = await _deviceService.GetAllAsync(callerId);
         var summary = new
         {
             TotalDevices = devices.Count(),
@@ -55,3 +57,11 @@ public class DeviceHealthController : ControllerBase
         return Ok(summary);
     }
 }
+
+    private int? GetCallerUserIdFromHeader()
+    {
+        var idHeader = HttpContext.Request.Headers["X-User-Id"].FirstOrDefault();
+        if (string.IsNullOrEmpty(idHeader) || !int.TryParse(idHeader, out var userId))
+            return null;
+        return userId;
+    }
