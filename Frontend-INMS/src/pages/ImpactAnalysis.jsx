@@ -136,9 +136,12 @@ export default function ImpactAnalysis() {
   }, [selectedDeviceId]);
 
   // Process impacted devices from backend response
-  const impactedDevices = impactData?.impactedDevices || [];
-  const rootCause = impactData?.rootCause;
-  const rootDevice = rootCause?.rootDevice;
+  const impactedDevices = impactData?.affectedDevices || [];
+  const rootCauses = impactData?.rootCauses || [];
+  const analyzedDevice = impactData?.analyzedDevice;
+
+  // Get primary root cause (first one)
+  const primaryRootCause = rootCauses.length > 0 ? rootCauses[0] : null;
 
   // Count devices by type
   const getDeviceTypeCounts = useCallback(() => {
@@ -175,6 +178,25 @@ export default function ImpactAnalysis() {
         </p>
       </div>
 
+      {/* Debug Info (remove in production) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-gray-100 p-3 rounded text-xs space-y-1">
+          <div><strong>Debug Info:</strong></div>
+          <div>Selected Device ID: {selectedDeviceId || 'None'}</div>
+          <div>Node Search: "{nodeSearch}"</div>
+          <div>Devices Loaded: {devices.length}</div>
+          <div>Filtered Devices: {filteredDevices.length}</div>
+          <div>Impact Data: {impactData ? 'Loaded' : 'None'}</div>
+          <div>Root Causes: {rootCauses.length}</div>
+          <div>Affected Devices: {impactedDevices.length}</div>
+          <div>Loading: {loading ? 'Yes' : 'No'}</div>
+          <div>Analyzing: {analyzing ? 'Yes' : 'No'}</div>
+          {impactData && (
+            <div>API Response: {JSON.stringify(impactData, null, 2)}</div>
+          )}
+        </div>
+      )}
+
       {/* Error Alert */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -182,37 +204,19 @@ export default function ImpactAnalysis() {
         </div>
       )}
 
-      {/* Root Cause Card */}
-      {rootCause && rootDevice && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Root Cause Device Info */}
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <h3 className="text-red-900 font-semibold text-sm mb-4">Root Cause Device</h3>
-            <div className="space-y-2 text-sm">
-              <div><strong className="text-red-700">Device:</strong> {rootDevice.deviceName}</div>
-              <div><strong className="text-red-700">Device ID:</strong> {rootDevice.deviceId}</div>
-              <div><strong className="text-red-700">Type:</strong> <span className={`${getTypeBadgeClass(rootDevice.deviceType)} px-2 py-1 rounded text-xs font-semibold`}>{rootDevice.deviceType}</span></div>
-              <div><strong className="text-red-700">Status:</strong> <span className={`${getStatusBadgeClass(rootDevice.status)} px-2 py-1 rounded text-xs font-bold`}>{rootDevice.status}</span></div>
-              <div><strong className="text-red-700">IP Address:</strong> <span className="font-mono">{rootDevice.ip || 'N/A'}</span></div>
-              <div><strong className="text-red-700">Coordinates:</strong> {rootDevice.latitude?.toFixed(4)}, {rootDevice.longitude?.toFixed(4)}</div>
-              <div><strong className="text-red-700">LEA:</strong> {rootDevice.lea || 'N/A'}</div>
-              <div><strong className="text-red-700">Province:</strong> {rootDevice.province || 'N/A'}</div>
-              <div><strong className="text-red-700">Region:</strong> {rootDevice.region || 'N/A'}</div>
-            </div>
-          </div>
-
-          {/* Impact Summary */}
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-            <h3 className="text-orange-900 font-semibold text-sm mb-4">Impact Summary</h3>
-            <div className="space-y-2 text-sm">
-              <div><strong className="text-orange-700">Root Cause Type:</strong> {rootCause.rootCauseType}</div>
-              <div><strong className="text-orange-700">Detected Time:</strong> {new Date(rootCause.detectedTime).toLocaleString()}</div>
-              <div><strong className="text-orange-700">Total Affected Devices:</strong> <span className="text-lg font-bold text-orange-700">{affectedCount}</span></div>
-              {Object.entries(typeCounts).map(([type, count]) => (
-                <div key={type}><strong className="text-orange-700">{type}:</strong> {count} device(s)</div>
-              ))}
-            </div>
-          </div>
+      {/* Root Cause Info */}
+      {primaryRootCause && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-blue-900 font-semibold text-sm mb-2">Root Cause Identified</h3>
+          <p className="text-blue-800 text-sm">
+            Device <strong>{primaryRootCause.rootDevice?.deviceName}</strong> (ID: {primaryRootCause.rootDevice?.deviceId}) - 
+            Type: {primaryRootCause.rootCauseType} | Alarm: {primaryRootCause.alarmType}
+          </p>
+          {rootCauses.length > 1 && (
+            <p className="text-blue-700 text-xs mt-1">
+              + {rootCauses.length - 1} additional root cause(s) detected
+            </p>
+          )}
         </div>
       )}
 
@@ -256,6 +260,46 @@ export default function ImpactAnalysis() {
             {analyzing ? "Analyzing..." : "Run Analysis"}
           </button>
         </div>
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={async () => {
+              if (!selectedDeviceId) return;
+              try {
+                setAnalyzing(true);
+                const result = await ImpactAnalysisService.clearDeviceImpact(selectedDeviceId);
+                setImpactData(result);
+              } catch (err) {
+                setError(`Clear failed: ${err.message}`);
+              } finally {
+                setAnalyzing(false);
+              }
+            }}
+            disabled={!selectedDeviceId || analyzing}
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white text-xs
+            font-medium px-3 py-1 rounded transition"
+          >
+            Clear Impact
+          </button>
+          <button
+            onClick={async () => {
+              if (!selectedDeviceId) return;
+              try {
+                setLoading(true);
+                const result = await ImpactAnalysisService.getImpactResult(selectedDeviceId);
+                setImpactData(result);
+              } catch (err) {
+                setError(`Refresh failed: ${err.message}`);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={!selectedDeviceId || loading}
+            className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white text-xs
+            font-medium px-3 py-1 rounded transition"
+          >
+            Refresh
+          </button>
+        </div>
         {selectedDeviceId && (
           <div className="text-xs text-green-600">
             Selected: Device ID {selectedDeviceId}
@@ -276,13 +320,32 @@ export default function ImpactAnalysis() {
       {/* Summary Cards */}
       {!loading && impactData && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Analyzed Device Card */}
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+              <h3 className="text-gray-700 font-semibold text-sm mb-3">Analyzed Device</h3>
+              <div className="space-y-2 text-xs">
+                <div><strong>Name:</strong> {analyzedDevice?.deviceName}</div>
+                <div><strong>ID:</strong> {analyzedDevice?.deviceId}</div>
+                <div><strong>Type:</strong> <span className={`${getTypeBadgeClass(analyzedDevice?.deviceType)} px-2 py-1 rounded text-xs font-semibold`}>{analyzedDevice?.deviceType}</span></div>
+                <div><strong>Status:</strong> <span className={`${getStatusBadgeClass(analyzedDevice?.status)} px-2 py-1 rounded text-xs font-bold`}>{analyzedDevice?.status}</span></div>
+                <div><strong>Location:</strong> {analyzedDevice?.lea}, {analyzedDevice?.province}</div>
+              </div>
+            </div>
+            
             <SummaryCard 
               title="Total Nodes Affected" 
               value={affectedCount.toString()} 
               color="bg-orange-50 border-orange-300" 
             />
-            {Object.entries(typeCounts).map(([type, count]) => (
+            
+            <SummaryCard 
+              title="Root Causes Found" 
+              value={rootCauses.length.toString()} 
+              color="bg-red-50 border-red-300" 
+            />
+            
+            {Object.entries(typeCounts).slice(0, 1).map(([type, count]) => (
               <SummaryCard
                 key={type}
                 title={`${type} Affected`}
@@ -291,6 +354,27 @@ export default function ImpactAnalysis() {
               />
             ))}
           </div>
+
+          {/* Impact Scope */}
+          {primaryRootCause && (
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+              <h2 className="text-base font-semibold text-gray-700 mb-3">
+                Impact Scope
+              </h2>
+              <div className="space-y-2">
+                {rootCauses.map((rootCause, index) => (
+                  <div key={rootCause.rootCauseId} className="bg-yellow-50 border-l-4 border-yellow-400 rounded px-4 py-3 text-sm text-yellow-800">
+                    Root Cause {index + 1}: {rootCause.rootDevice?.deviceName} ({rootCause.rootCauseType})
+                    <br />
+                    Alarm Type: {rootCause.alarmType} | Detected: {new Date(rootCause.detectedTime).toLocaleString()}
+                  </div>
+                ))}
+                <div className="text-sm text-gray-600 mt-2">
+                  Total Affected Devices: {affectedCount}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Affected Nodes Table */}
           <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -315,15 +399,11 @@ export default function ImpactAnalysis() {
                 <table className="w-full text-sm text-left">
                   <thead>
                     <tr className="border-b border-gray-200 text-gray-500 uppercase text-xs">
+                      <th className="py-2 px-3 font-semibold">Device ID</th>
                       <th className="py-2 px-3 font-semibold">Device Name</th>
-                      <th className="py-2 px-3 font-semibold">Type</th>
                       <th className="py-2 px-3 font-semibold">Status</th>
-                      <th className="py-2 px-3 font-semibold">IP Address</th>
-                      <th className="py-2 px-3 font-semibold">LEA</th>
-                      <th className="py-2 px-3 font-semibold">Province</th>
-                      <th className="py-2 px-3 font-semibold">Region</th>
-                      <th className="py-2 px-3 font-semibold">Coordinates</th>
                       <th className="py-2 px-3 font-semibold">Impact Type</th>
+                      <th className="py-2 px-3 font-semibold">Location</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -332,36 +412,22 @@ export default function ImpactAnalysis() {
                         key={device.deviceId} 
                         className="border-b border-gray-100 hover:bg-gray-50 transition"
                       >
+                        <td className="py-2.5 px-3 font-mono text-xs text-gray-600">
+                          {device.deviceId}
+                        </td>
                         <td className="py-2.5 px-3 font-medium text-gray-800">
                           {device.deviceName}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span className={`${getTypeBadgeClass(device.deviceType)} text-xs font-semibold px-2 py-0.5 rounded`}>
-                            {device.deviceType}
-                          </span>
                         </td>
                         <td className="py-2.5 px-3">
                           <span className={`${getStatusBadgeClass(device.status)} text-xs font-bold px-2 py-0.5 rounded`}>
                             {device.status}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-xs text-gray-600">
-                          {device.ip || 'N/A'}
-                        </td>
-                        <td className="py-2.5 px-3 text-sm text-gray-700">
-                          {device.lea || 'N/A'}
-                        </td>
-                        <td className="py-2.5 px-3 text-sm text-gray-700">
-                          {device.province || 'N/A'}
-                        </td>
-                        <td className="py-2.5 px-3 text-sm text-gray-700">
-                          {device.region || 'N/A'}
-                        </td>
-                        <td className="py-2.5 px-3 font-mono text-xs text-gray-600">
-                          {device.latitude?.toFixed(4)}, {device.longitude?.toFixed(4)}
-                        </td>
-                        <td className="py-2.5 px-3 text-sm text-gray-700">
+                        <td className="py-2.5 px-3 text-gray-600 text-sm">
                           {device.impactType}
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-500 text-xs">
+                          {device.lea} | {device.province}
                         </td>
                       </tr>
                     ))}
