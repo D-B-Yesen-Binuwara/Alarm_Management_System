@@ -508,3 +508,6 @@ BEGIN
     END
 END;
 
+
+---------  CREATE INDEX FOR FAST LOADING ----------------
+CREATE INDEX IX_Heartbeat_DeviceId_Timestamp ON Heartbeat(DeviceId, Timestamp DESC);

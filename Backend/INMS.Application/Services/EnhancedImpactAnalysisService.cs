@@ -45,8 +45,8 @@ public class EnhancedImpactAnalysisService : IImpactAnalysisService
     {
         var device = await _context.Devices
             .Include(d => d.LEA)
-            .ThenInclude(lea => lea.Province)
-            .ThenInclude(p => p.Region)
+            .ThenInclude(lea => lea!.Province)
+            .ThenInclude(p => p!.Region)
             .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
 
         if (device == null)
@@ -246,8 +246,8 @@ public class EnhancedImpactAnalysisService : IImpactAnalysisService
                 // Get device details
                 var childDevice = await _context.Devices
                     .Include(d => d.LEA)
-                    .ThenInclude(lea => lea.Province)
-                    .ThenInclude(p => p.Region)
+                    .ThenInclude(lea => lea!.Province)
+                    .ThenInclude(p => p!.Region)
                     .FirstOrDefaultAsync(d => d.DeviceId == childLink.ChildDeviceId);
 
                 if (childDevice != null)
@@ -474,8 +474,8 @@ public class EnhancedImpactAnalysisService : IImpactAnalysisService
     {
         var rootDevice = await _context.Devices
             .Include(d => d.LEA)
-            .ThenInclude(lea => lea.Province)
-            .ThenInclude(p => p.Region)
+            .ThenInclude(lea => lea!.Province)
+            .ThenInclude(p => p!.Region)
             .FirstOrDefaultAsync(d => d.DeviceId == rootCause.RootCauseDeviceId);
 
         var alarm = await _context.Alarms

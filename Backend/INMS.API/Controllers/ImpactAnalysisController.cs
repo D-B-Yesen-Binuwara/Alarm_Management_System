@@ -85,8 +85,8 @@ public class ImpactAnalysisController : ControllerBase
         var device = await _context.Devices
             .AsNoTracking()
             .Include(d => d.LEA)
-            .ThenInclude(lea => lea.Province)
-            .ThenInclude(p => p.Region)
+            .ThenInclude(lea => lea!.Province)
+            .ThenInclude(p => p!.Region)
             .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
 
         if (device == null)
@@ -107,9 +107,12 @@ public class ImpactAnalysisController : ControllerBase
             var impactedRows = await (
                 from impacted in _context.ImpactedDevices.AsNoTracking()
                 join d in _context.Devices.AsNoTracking() on impacted.DeviceId equals d.DeviceId
-                join lea in _context.LEAs.AsNoTracking() on d.LEAId equals lea.LEAId
-                join province in _context.Provinces.AsNoTracking() on lea.ProvinceId equals province.ProvinceId
-                join region in _context.Regions.AsNoTracking() on province.RegionId equals region.RegionId
+                join lea in _context.LEAs.AsNoTracking() on d.LEAId equals lea.LEAId into leaJoin
+                from lea in leaJoin.DefaultIfEmpty()
+                join province in _context.Provinces.AsNoTracking() on lea.ProvinceId equals province.ProvinceId into provinceJoin
+                from province in provinceJoin.DefaultIfEmpty()
+                join region in _context.Regions.AsNoTracking() on province.RegionId equals region.RegionId into regionJoin
+                from region in regionJoin.DefaultIfEmpty()
                 where impacted.RootCauseId == rootCause.RootCauseId
                 select new
                 {
@@ -120,9 +123,9 @@ public class ImpactAnalysisController : ControllerBase
                     d.IP,
                     d.Latitude,
                     d.Longitude,
-                    LEA = lea.Name ?? "",
-                    Province = province.Name ?? "",
-                    Region = region.Name ?? "",
+                    LEA = lea != null ? lea.Name : "",
+                    Province = province != null ? province.Name : "",
+                    Region = region != null ? region.Name : "",
                     impacted.ImpactType
                 })
                 .ToListAsync();
@@ -133,8 +136,8 @@ public class ImpactAnalysisController : ControllerBase
         var rootDevice = rootCause != null ? await _context.Devices
             .AsNoTracking()
             .Include(d => d.LEA)
-            .ThenInclude(lea => lea.Province)
-            .ThenInclude(p => p.Region)
+            .ThenInclude(lea => lea!.Province)
+            .ThenInclude(p => p!.Region)
             .FirstOrDefaultAsync(d => d.DeviceId == rootCause.RootCauseDeviceId) : null;
 
         return new

@@ -501,8 +501,8 @@ public class ImpactAnalysisService : IImpactAnalysisService
         // For now, return a basic result using existing logic
         var device = await _context.Devices
             .Include(d => d.LEA)
-            .ThenInclude(lea => lea.Province)
-            .ThenInclude(p => p.Region)
+            .ThenInclude(lea => lea!.Province)
+            .ThenInclude(p => p!.Region)
             .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
 
         if (device == null)

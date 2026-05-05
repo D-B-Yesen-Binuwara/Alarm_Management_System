@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import VendorTable from '../../components/vendors/VendorTable';
-// import VendorService from '../../services/VendorService';
+import VendorService from '../../services/VendorService';
 import VendorFormModal from './VendorFormModal';
 
 function readFirst(source, keys, fallback = null) {
