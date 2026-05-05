@@ -15,14 +15,17 @@ namespace INMS.Application.Services
     {
         private const string OllamaUrl = "http://localhost:11434/api/generate";
         private const string OllamaModel = "llama3";
-        private const int OllamaRequestTimeoutSeconds = 20;
+        private const int OllamaRequestTimeoutSeconds = 10;
+        private const int OllamaMaxResponseTokens = 120;
         private const string GeneralSystemPrompt = @"You are a Network Operations Assistant for an Integrated Network Management System.
 You understand SLBN, CEAN, and MSAN layers.
 Answer only network-related questions.
 If the question needs live data, guide the user toward supported queries such as total nodes, active nodes, down nodes, active alarms, device status, critical alarms, root cause, or impacted devices.
+Keep responses under four short sentences.
 Be concise and technical.";
         private const int AlarmPreviewLimit = 10;
         private const int ImpactedDevicePreviewLimit = 10;
+        private const int DevicePreviewLimit = 10;
 
         private static readonly string[] DeviceStatusMarkers =
         [
@@ -55,6 +58,13 @@ Be concise and technical.";
             }
 
             var trimmedMessage = userMessage.Trim();
+            var fastGeneralResponse = TryBuildFastGeneralResponse(trimmedMessage);
+            if (fastGeneralResponse != null)
+            {
+                _logger.LogInformation("Chat request completed with fast general response.");
+                return fastGeneralResponse;
+            }
+
             var intent = DetectIntent(trimmedMessage);
             var stopwatch = Stopwatch.StartNew();
 
@@ -66,6 +76,7 @@ Be concise and technical.";
                     ChatIntent.ActiveNodes => await HandleActiveNodesIntentAsync(trimmedMessage),
                     ChatIntent.DownNodes => await HandleDownNodesIntentAsync(trimmedMessage),
                     ChatIntent.ActiveAlarms => await HandleActiveAlarmsIntentAsync(trimmedMessage),
+                    ChatIntent.NetworkOverview => await HandleNetworkOverviewIntentAsync(trimmedMessage),
                     ChatIntent.DeviceStatus => await HandleDeviceStatusIntentAsync(trimmedMessage),
                     ChatIntent.CriticalAlarms => await HandleCriticalAlarmsIntentAsync(trimmedMessage),
                     ChatIntent.RootCause => await HandleRootCauseIntentAsync(trimmedMessage),
@@ -132,18 +143,19 @@ Be concise and technical.";
         {
             var rows = await (
                 from alarm in _dbContext.Alarms.AsNoTracking()
-                join device in _dbContext.Devices.AsNoTracking() on alarm.DeviceId equals device.DeviceId
+                join device in _dbContext.Devices.AsNoTracking() on alarm.DeviceId equals device.DeviceId into deviceGroup
+                from device in deviceGroup.DefaultIfEmpty()
                 where alarm.IsActive
                 orderby alarm.RaisedTime descending
                 select new
                 {
                     alarm.AlarmId,
                     alarm.DeviceId,
-                    device.DeviceName,
+                    DeviceName = device == null ? null : device.DeviceName,
                     alarm.AlarmType,
                     alarm.RaisedTime,
-                    device.Status,
-                    device.PriorityLevel
+                    Status = device == null ? (DeviceStatus?)null : device.Status,
+                    PriorityLevel = device == null ? (PriorityLevel?)null : device.PriorityLevel
                 })
                 .ToListAsync();
 
@@ -151,11 +163,12 @@ Be concise and technical.";
                 .Select(row => new AlarmSummary(
                     row.AlarmId,
                     row.DeviceId,
-                    row.DeviceName,
+                    row.DeviceName ?? $"Device #{row.DeviceId}",
                     row.AlarmType,
                     row.RaisedTime,
-                    row.Status,
-                    row.PriorityLevel))
+                    row.Status ?? DeviceStatus.UNREACHABLE,
+                    row.PriorityLevel ?? PriorityLevel.Low,
+                    row.DeviceName != null))
                 .ToList();
         }
 
@@ -335,12 +348,24 @@ Be concise and technical.";
 
         private async Task<string> HandleActiveNodesIntentAsync(string userMessage)
         {
+            if (WantsList(userMessage))
+            {
+                var snapshot = await GetDeviceSnapshotAsync(activeOnly: true, DevicePreviewLimit);
+                return BuildDeviceSnapshotResponse(snapshot, "active nodes");
+            }
+
             var activeNodeSummary = await GetActiveNodeCountAsync();
             return $"{activeNodeSummary.ActiveNodes} of {activeNodeSummary.TotalNodes} network nodes are currently active. {activeNodeSummary.DownNodes} are down or unreachable.";
         }
 
         private async Task<string> HandleDownNodesIntentAsync(string userMessage)
         {
+            if (WantsList(userMessage))
+            {
+                var snapshot = await GetDeviceSnapshotAsync(activeOnly: false, DevicePreviewLimit);
+                return BuildDeviceSnapshotResponse(snapshot, "down or unreachable nodes");
+            }
+
             var nodeSummary = await GetActiveNodeCountAsync();
             return $"{nodeSummary.DownNodes} network nodes are currently down or unreachable. {nodeSummary.ActiveNodes} remain active out of {nodeSummary.TotalNodes} total nodes.";
         }
@@ -349,6 +374,23 @@ Be concise and technical.";
         {
             var snapshot = await GetAlarmSnapshotAsync(criticalOnly: false, AlarmPreviewLimit);
             return BuildAlarmSnapshotResponse(snapshot, "active alarms");
+        }
+
+        private async Task<string> HandleNetworkOverviewIntentAsync(string userMessage)
+        {
+            var nodeSummary = await GetActiveNodeCountAsync();
+            var activeAlarmCount = await _dbContext.Alarms
+                .AsNoTracking()
+                .CountAsync(alarm => alarm.IsActive);
+
+            var criticalAlarmCount = await (
+                from alarm in _dbContext.Alarms.AsNoTracking()
+                join device in _dbContext.Devices.AsNoTracking() on alarm.DeviceId equals device.DeviceId
+                where alarm.IsActive && device.PriorityLevel == PriorityLevel.Critical
+                select alarm.AlarmId)
+                .CountAsync();
+
+            return $"Network overview: {nodeSummary.ActiveNodes}/{nodeSummary.TotalNodes} nodes are active, {nodeSummary.DownNodes} are down or unreachable, and there are {activeAlarmCount} active alarms. Critical-priority active alarms: {criticalAlarmCount}.";
         }
 
         private async Task<string> HandleDeviceStatusIntentAsync(string userMessage)
@@ -418,17 +460,18 @@ Be concise and technical.";
         {
             var query =
                 from alarm in _dbContext.Alarms.AsNoTracking()
-                join device in _dbContext.Devices.AsNoTracking() on alarm.DeviceId equals device.DeviceId
-                where alarm.IsActive && (!criticalOnly || device.PriorityLevel == PriorityLevel.Critical)
+                join device in _dbContext.Devices.AsNoTracking() on alarm.DeviceId equals device.DeviceId into deviceGroup
+                from device in deviceGroup.DefaultIfEmpty()
+                where alarm.IsActive && (!criticalOnly || (device != null && device.PriorityLevel == PriorityLevel.Critical))
                 select new
                 {
                     alarm.AlarmId,
                     alarm.DeviceId,
-                    device.DeviceName,
+                    DeviceName = device == null ? null : device.DeviceName,
                     alarm.AlarmType,
                     alarm.RaisedTime,
-                    device.Status,
-                    device.PriorityLevel
+                    Status = device == null ? (DeviceStatus?)null : device.Status,
+                    PriorityLevel = device == null ? (PriorityLevel?)null : device.PriorityLevel
                 };
 
             var totalCount = await query.CountAsync();
@@ -443,12 +486,41 @@ Be concise and technical.";
                     .Select(row => new AlarmSummary(
                         row.AlarmId,
                         row.DeviceId,
-                        row.DeviceName,
+                        row.DeviceName ?? $"Device #{row.DeviceId}",
                         row.AlarmType,
                         row.RaisedTime,
-                        row.Status,
-                        row.PriorityLevel))
+                        row.Status ?? DeviceStatus.UNREACHABLE,
+                        row.PriorityLevel ?? PriorityLevel.Low,
+                        row.DeviceName != null))
                     .ToList());
+        }
+
+        private async Task<DeviceSnapshot> GetDeviceSnapshotAsync(bool activeOnly, int limit)
+        {
+            var query = _dbContext.Devices.AsNoTracking();
+
+            query = activeOnly
+                ? query.Where(device => device.Status == DeviceStatus.UP)
+                : query.Where(device =>
+                    device.Status == DeviceStatus.DOWN ||
+                    device.Status == DeviceStatus.UNREACHABLE ||
+                    device.IsSimulatedDown);
+
+            var totalCount = await query.CountAsync();
+            var rows = await query
+                .OrderByDescending(device => device.PriorityLevel)
+                .ThenBy(device => device.DeviceName)
+                .Take(limit)
+                .Select(device => new DeviceSummary(
+                    device.DeviceId,
+                    device.DeviceName,
+                    device.DeviceType.ToString(),
+                    device.Status,
+                    device.PriorityLevel,
+                    device.IP))
+                .ToListAsync();
+
+            return new DeviceSnapshot(totalCount, rows);
         }
 
         private async Task<string> RequestOllamaResponseAsync(string prompt)
@@ -458,7 +530,13 @@ Be concise and technical.";
                 model = OllamaModel,
                 prompt,
                 stream = false,
-                keep_alive = "15m"
+                keep_alive = "15m",
+                options = new
+                {
+                    temperature = 0.2,
+                    top_p = 0.9,
+                    num_predict = OllamaMaxResponseTokens
+                }
             };
 
             var response = await _httpClient.PostAsJsonAsync(OllamaUrl, requestBody);
@@ -482,34 +560,70 @@ Be concise and technical.";
                     "total node count",
                     "how many nodes are there",
                     "how many total nodes",
+                    "how many devices are there",
+                    "how many total devices",
                     "number of nodes",
+                    "number of devices",
                     "node count",
-                    "count of nodes"))
+                    "device count",
+                    "node count eka",
+                    "device count eka",
+                    "nodes keeyada",
+                    "devices keeyada",
+                    "node ganana",
+                    "device ganana",
+                    "count of nodes",
+                    "count of devices",
+                    "all nodes count"))
             {
                 return ChatIntent.TotalNodes;
             }
 
             if (ContainsAny(normalized,
                     "active nodes",
+                    "active devices",
                     "reachable nodes",
+                    "reachable devices",
                     "active node count",
                     "up nodes",
+                    "up devices",
                     "online nodes",
+                    "online devices",
                     "healthy nodes",
+                    "working nodes",
+                    "running nodes",
                     "available nodes",
                     "how many are up",
-                    "how many up"))
+                    "how many up",
+                    "active nodes keeyada",
+                    "active devices keeyada",
+                    "up nodes keeyada",
+                    "online nodes keeyada"))
             {
                 return ChatIntent.ActiveNodes;
             }
 
             if (ContainsAny(normalized,
                     "down nodes",
+                    "down devices",
                     "failed nodes",
+                    "failed devices",
                     "unreachable nodes",
+                    "unreachable devices",
                     "offline nodes",
+                    "offline devices",
+                    "faulty nodes",
+                    "faulty devices",
+                    "not working nodes",
+                    "not working devices",
                     "how many are down",
-                    "how many down"))
+                    "how many down",
+                    "down nodes keeyada",
+                    "down devices keeyada",
+                    "offline nodes keeyada",
+                    "offline devices keeyada",
+                    "down nodes tika",
+                    "down devices tika"))
             {
                 return ChatIntent.DownNodes;
             }
@@ -531,6 +645,26 @@ Be concise and technical.";
             }
 
             if (ContainsAny(normalized,
+                    "network overview",
+                    "network summary",
+                    "network health",
+                    "system overview",
+                    "system summary",
+                    "system status",
+                    "overall status",
+                    "overall health",
+                    "current situation",
+                    "dashboard summary",
+                    "system insights",
+                    "network state",
+                    "network summary eka",
+                    "network health eka",
+                    "system status eka"))
+            {
+                return ChatIntent.NetworkOverview;
+            }
+
+            if (ContainsAny(normalized,
                     "device status",
                     "status of",
                     "status for",
@@ -544,11 +678,23 @@ Be concise and technical.";
 
             if (ContainsAny(normalized,
                     "active alarms",
+                    "active alarm",
                     "current alarms",
+                    "current alarm",
                     "open alarms",
+                    "open alarm",
                     "show alarms",
                     "list alarms",
                     "alarm list",
+                    "alarms list",
+                    "fault list",
+                    "current faults",
+                    "open faults",
+                    "alarms pennanna",
+                    "alarms penwanna",
+                    "alarms balanna",
+                    "active alarms tika",
+                    "current alarms tika",
                     "how many alarms are active",
                     "how many alarms"))
             {
@@ -566,6 +712,239 @@ Be concise and technical.";
             }
 
             return ChatIntent.General;
+        }
+
+        private static string? TryBuildFastGeneralResponse(string userMessage)
+        {
+            var normalized = userMessage.ToLowerInvariant();
+            var hasAlarmId = ExtractAlarmId(userMessage).HasValue;
+
+            if (IsGreeting(normalized))
+            {
+                return "Hi. I can help with INMS network status, active/down nodes, alarms, device health, root cause, and impacted devices. Try asking: network summary, show active alarms, or status of SLBN-Colombo-01.";
+            }
+
+            if (ContainsAny(normalized,
+                    "help",
+                    "what can you do",
+                    "how can you help",
+                    "commands",
+                    "sample questions",
+                    "example questions",
+                    "what should i ask",
+                    "questions can i ask"))
+            {
+                return "You can ask me for: network summary, total nodes, active nodes, down nodes, active alarms, critical alarms, device status, root cause for an alarm ID, or impacted devices for an alarm ID.";
+            }
+
+            if (ContainsAny(normalized,
+                    "what is slbn",
+                    "what's slbn",
+                    "define slbn",
+                    "slbn means",
+                    "about slbn",
+                    "slbn layer",
+                    "slbn mokakda",
+                    "slbn mokadda",
+                    "slbn kiyanne"))
+            {
+                return "SLBN is the service or backbone layer represented in this INMS topology. It is treated as an upstream network layer, so a fault there can affect lower-layer CEAN/MSAN devices and services.";
+            }
+
+            if (ContainsAny(normalized,
+                    "what is cean",
+                    "what's cean",
+                    "define cean",
+                    "cean means",
+                    "about cean",
+                    "cean layer",
+                    "cean mokakda",
+                    "cean mokadda",
+                    "cean kiyanne"))
+            {
+                return "CEAN is an aggregation/access network layer in this INMS model. CEAN devices sit between upstream SLBN nodes and downstream access nodes, so their failures can create wider service impact.";
+            }
+
+            if (ContainsAny(normalized,
+                    "what is msan",
+                    "what's msan",
+                    "define msan",
+                    "msan means",
+                    "about msan",
+                    "msan layer",
+                    "msan mokakda",
+                    "msan mokadda",
+                    "msan kiyanne"))
+            {
+                return "MSAN stands for Multi-Service Access Node. In this system it represents an access-layer device that can serve downstream customers or services and can be impacted by upstream faults.";
+            }
+
+            if (ContainsAny(normalized,
+                    "what is inms",
+                    "what's inms",
+                    "define inms",
+                    "about inms",
+                    "alarm management system",
+                    "integrated network management system",
+                    "inms mokakda",
+                    "inms mokadda",
+                    "inms kiyanne"))
+            {
+                return "INMS is the Integrated Network Management System used here to monitor devices, raise alarms, simulate failures, identify root causes, and show impacted devices across the telecom topology.";
+            }
+
+            if (!hasAlarmId && ContainsAny(normalized,
+                    "what is root cause",
+                    "what's root cause",
+                    "define root cause",
+                    "explain root cause",
+                    "root cause analysis",
+                    "root cause mokakda",
+                    "root cause mokadda",
+                    "root cause kiyanne"))
+            {
+                return "Root cause is the upstream or primary device/fault that triggered one or more downstream alarms. Ask 'root cause for alarm 12' when you want the system to look up a specific alarm.";
+            }
+
+            if (!hasAlarmId && ContainsAny(normalized,
+                    "what are impacted devices",
+                    "what is impacted device",
+                    "define impacted devices",
+                    "explain impacted devices",
+                    "impact analysis",
+                    "impacted devices monawada",
+                    "impacted devices mokakda",
+                    "impacted devices kiyanne"))
+            {
+                return "Impacted devices are downstream devices affected by a detected root cause. Ask 'impacted devices for alarm 12' to list the affected devices for a specific alarm.";
+            }
+
+            if (ContainsAny(normalized,
+                    "alarm correlation",
+                    "what is correlation",
+                    "explain correlation",
+                    "correlate alarms"))
+            {
+                return "Alarm correlation groups related alarms so the operator can focus on the likely root cause instead of treating every downstream alarm as a separate failure.";
+            }
+
+            if (ContainsAny(normalized,
+                    "what is alarm",
+                    "what are alarms",
+                    "define alarm",
+                    "explain alarm",
+                    "alarm mokakda",
+                    "alarm mokadda",
+                    "alarm kiyanne",
+                    "alarms monawada"))
+            {
+                return "An alarm is a fault or warning raised against a network device. In this system active alarms show current unresolved issues, while critical alarms highlight faults on critical-priority devices.";
+            }
+
+            if (ContainsAny(normalized,
+                    "what is device status",
+                    "define device status",
+                    "explain device status",
+                    "device status mokakda",
+                    "device status kiyanne",
+                    "status meanings"))
+            {
+                return "Device status shows the current operational state of a node: UP means healthy, DOWN means failed, UNREACHABLE means it cannot be reached, and IMPACTED means it is affected by another fault.";
+            }
+
+            if (!ContainsAny(normalized, "alarm", "alarms", "fault", "faults") &&
+                ContainsAny(normalized,
+                    "priority level",
+                    "critical priority",
+                    "what is critical",
+                    "severity",
+                    "priority mokakda",
+                    "priority kiyanne",
+                    "severity kiyanne"))
+            {
+                return "Priority indicates the operational importance of a device or alarm context. Critical-priority devices are the highest concern because a failure there can create wider service impact.";
+            }
+
+            if (ContainsAny(normalized,
+                    "network topology",
+                    "topology",
+                    "topology eka",
+                    "network hierarchy",
+                    "hierarchy"))
+            {
+                return "The INMS topology models telecom devices in upstream and downstream layers such as SLBN, CEAN, and MSAN. This hierarchy helps the system identify which downstream devices may be impacted when an upstream node fails.";
+            }
+
+            if (ContainsAny(normalized,
+                    "failure simulation",
+                    "simulate failure",
+                    "simulate node",
+                    "simulation eka",
+                    "device down simulation"))
+            {
+                return "Failure simulation marks a device as down so INMS can raise alarms, detect likely root cause, and calculate downstream impact. Use the device simulation actions in the system when you want to test alarm behavior.";
+            }
+
+            if (!IsNetworkRelated(normalized))
+            {
+                return "I am focused on INMS and network operations. Ask me about nodes, alarms, device status, root cause, impacted devices, SLBN, CEAN, or MSAN.";
+            }
+
+            return null;
+        }
+
+        private static bool IsGreeting(string normalized)
+        {
+            var cleaned = normalized.Trim().Trim('.', '?', '!', ',', ':', ';');
+            return cleaned is "hi" or "hello" or "hey" or "hai" or "hii" or "good morning" or "good afternoon" or "good evening";
+        }
+
+        private static bool IsNetworkRelated(string normalized)
+        {
+            return ContainsAny(normalized,
+                "network",
+                "node",
+                "nodes",
+                "device",
+                "devices",
+                "alarm",
+                "alarms",
+                "fault",
+                "faults",
+                "failure",
+                "failures",
+                "outage",
+                "status",
+                "health",
+                "root cause",
+                "impact",
+                "impacted",
+                "slbn",
+                "cean",
+                "msan",
+                "inms",
+                "nms",
+                "topology",
+                "simulation",
+                "simulate",
+                "critical",
+                "priority");
+        }
+
+        private static bool WantsList(string userMessage)
+        {
+            return ContainsAny(userMessage,
+                "show",
+                "list",
+                "which",
+                "what are",
+                "names",
+                "details",
+                "display",
+                "tika",
+                "pennanna",
+                "penwanna",
+                "balanna");
         }
 
         private static bool ContainsAny(string value, params string[] phrases)
@@ -668,8 +1047,12 @@ Be concise and technical.";
 
             foreach (var alarm in alarms)
             {
+                var deviceDetails = alarm.DeviceFound
+                    ? $"Device={alarm.DeviceName}; DeviceId={alarm.DeviceId}; DeviceStatus={alarm.DeviceStatus}; Priority={alarm.PriorityLevel}"
+                    : $"DeviceId={alarm.DeviceId}; Device details unavailable";
+
                 builder.AppendLine(
-                    $"- AlarmId={alarm.AlarmId}; Device={alarm.DeviceName}; DeviceId={alarm.DeviceId}; AlarmType={alarm.AlarmType}; DeviceStatus={alarm.DeviceStatus}; Priority={alarm.PriorityLevel}; RaisedTimeUtc={alarm.RaisedTime:O}");
+                    $"- AlarmId={alarm.AlarmId}; {deviceDetails}; AlarmType={alarm.AlarmType}; RaisedTimeUtc={alarm.RaisedTime:O}");
             }
 
             return builder.ToString().TrimEnd();
@@ -734,8 +1117,12 @@ Be concise and technical.";
 
             foreach (var alarm in alarms)
             {
+                var deviceDetails = alarm.DeviceFound
+                    ? $"Device={alarm.DeviceName}; DeviceId={alarm.DeviceId}; DeviceStatus={alarm.DeviceStatus}; Priority={alarm.PriorityLevel}"
+                    : $"DeviceId={alarm.DeviceId}; Device details unavailable";
+
                 builder.AppendLine(
-                    $"- AlarmId={alarm.AlarmId}; Device={alarm.DeviceName}; DeviceId={alarm.DeviceId}; AlarmType={alarm.AlarmType}; DeviceStatus={alarm.DeviceStatus}; Priority={alarm.PriorityLevel}; RaisedTimeUtc={alarm.RaisedTime:O}");
+                    $"- AlarmId={alarm.AlarmId}; {deviceDetails}; AlarmType={alarm.AlarmType}; RaisedTimeUtc={alarm.RaisedTime:O}");
             }
 
             return builder.ToString().TrimEnd();
@@ -819,8 +1206,12 @@ Be concise and technical.";
 
             foreach (var alarm in snapshot.Alarms)
             {
+                var deviceDetails = alarm.DeviceFound
+                    ? $"{alarm.DeviceName} (Device {alarm.DeviceId}) | {alarm.AlarmType} | Status {alarm.DeviceStatus} | Priority {alarm.PriorityLevel}"
+                    : $"Device {alarm.DeviceId} (device details unavailable) | {alarm.AlarmType}";
+
                 builder.AppendLine(
-                    $"- Alarm {alarm.AlarmId} on {alarm.DeviceName} (Device {alarm.DeviceId}) | {alarm.AlarmType} | Status {alarm.DeviceStatus} | Priority {alarm.PriorityLevel} | Raised {FormatUtc(alarm.RaisedTime)}");
+                    $"- Alarm {alarm.AlarmId} on {deviceDetails} | Raised {FormatUtc(alarm.RaisedTime)}");
             }
 
             if (snapshot.TotalCount > snapshot.Alarms.Count)
@@ -885,6 +1276,34 @@ Be concise and technical.";
             return builder.ToString().TrimEnd();
         }
 
+        private static string BuildDeviceSnapshotResponse(DeviceSnapshot snapshot, string label)
+        {
+            if (snapshot.TotalCount == 0)
+            {
+                return $"There are no {label} right now.";
+            }
+
+            var builder = new StringBuilder();
+            var verb = snapshot.TotalCount == 1 ? "is" : "are";
+
+            builder.AppendLine($"There {verb} {snapshot.TotalCount} {label}.");
+            builder.AppendLine($"Showing the first {snapshot.Devices.Count}:");
+
+            foreach (var device in snapshot.Devices)
+            {
+                builder.AppendLine(
+                    $"- {device.DeviceName} (Device {device.DeviceId}) | Type {device.DeviceType} | Status {device.Status} | Priority {device.PriorityLevel} | IP {device.IP}");
+            }
+
+            if (snapshot.TotalCount > snapshot.Devices.Count)
+            {
+                var remainingCount = snapshot.TotalCount - snapshot.Devices.Count;
+                builder.AppendLine($"... {remainingCount} more not shown.");
+            }
+
+            return builder.ToString().TrimEnd();
+        }
+
         private static string FormatUtc(DateTime value)
         {
             return $"{value:yyyy-MM-dd HH:mm:ss} UTC";
@@ -902,7 +1321,8 @@ Be concise and technical.";
             string AlarmType,
             DateTime RaisedTime,
             DeviceStatus DeviceStatus,
-            PriorityLevel PriorityLevel);
+            PriorityLevel PriorityLevel,
+            bool DeviceFound = true);
 
         public sealed record ActiveNodeSummary(
             int TotalNodes,
@@ -938,6 +1358,18 @@ Be concise and technical.";
             DeviceStatus Status,
             string ImpactType);
 
+        private sealed record DeviceSummary(
+            int DeviceId,
+            string DeviceName,
+            string DeviceType,
+            DeviceStatus Status,
+            PriorityLevel PriorityLevel,
+            string IP);
+
+        private sealed record DeviceSnapshot(
+            int TotalCount,
+            IReadOnlyList<DeviceSummary> Devices);
+
         private sealed record AlarmSnapshot(
             int TotalCount,
             IReadOnlyList<AlarmSummary> Alarms);
@@ -954,6 +1386,7 @@ Be concise and technical.";
             ActiveNodes,
             DownNodes,
             ActiveAlarms,
+            NetworkOverview,
             DeviceStatus,
             CriticalAlarms,
             RootCause,
