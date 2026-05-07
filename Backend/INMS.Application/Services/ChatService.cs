@@ -20,12 +20,15 @@ namespace INMS.Application.Services
         private const string GeneralSystemPrompt = @"You are a Network Operations Assistant for an Integrated Network Management System.
 You understand SLBN, CEAN, and MSAN layers.
 Answer only network-related questions.
-If the question needs live data, guide the user toward supported queries such as total nodes, active nodes, down nodes, active alarms, device status, critical alarms, root cause, or impacted devices.
+Use the live read-only database context when it is provided.
+Never claim that you updated, deleted, inserted, approved, rejected, or changed database data.
+If the question asks for live data that is not present in the context, ask for a more specific table, record, device, alarm, area, or ID.
 Keep responses under four short sentences.
 Be concise and technical.";
         private const int AlarmPreviewLimit = 10;
         private const int ImpactedDevicePreviewLimit = 10;
         private const int DevicePreviewLimit = 10;
+        private const int DatabasePreviewLimit = 10;
 
         private static readonly string[] DeviceStatusMarkers =
         [
@@ -58,14 +61,17 @@ Be concise and technical.";
             }
 
             var trimmedMessage = userMessage.Trim();
-            var fastGeneralResponse = TryBuildFastGeneralResponse(trimmedMessage);
-            if (fastGeneralResponse != null)
+            var intent = DetectIntent(trimmedMessage);
+            if (intent != ChatIntent.DatabaseLookup)
             {
-                _logger.LogInformation("Chat request completed with fast general response.");
-                return fastGeneralResponse;
+                var fastGeneralResponse = TryBuildFastGeneralResponse(trimmedMessage);
+                if (fastGeneralResponse != null)
+                {
+                    _logger.LogInformation("Chat request completed with fast general response.");
+                    return fastGeneralResponse;
+                }
             }
 
-            var intent = DetectIntent(trimmedMessage);
             var stopwatch = Stopwatch.StartNew();
 
             try
@@ -75,12 +81,14 @@ Be concise and technical.";
                     ChatIntent.TotalNodes => await HandleTotalNodesIntentAsync(trimmedMessage),
                     ChatIntent.ActiveNodes => await HandleActiveNodesIntentAsync(trimmedMessage),
                     ChatIntent.DownNodes => await HandleDownNodesIntentAsync(trimmedMessage),
+                    ChatIntent.LocationNodes => await HandleLocationNodesIntentAsync(trimmedMessage),
                     ChatIntent.ActiveAlarms => await HandleActiveAlarmsIntentAsync(trimmedMessage),
                     ChatIntent.NetworkOverview => await HandleNetworkOverviewIntentAsync(trimmedMessage),
                     ChatIntent.DeviceStatus => await HandleDeviceStatusIntentAsync(trimmedMessage),
                     ChatIntent.CriticalAlarms => await HandleCriticalAlarmsIntentAsync(trimmedMessage),
                     ChatIntent.RootCause => await HandleRootCauseIntentAsync(trimmedMessage),
                     ChatIntent.ImpactedDevices => await HandleImpactedDevicesIntentAsync(trimmedMessage),
+                    ChatIntent.DatabaseLookup => await HandleDatabaseLookupIntentAsync(trimmedMessage),
                     _ => await GenerateGeneralResponseAsync(trimmedMessage)
                 };
 
@@ -180,9 +188,11 @@ Be concise and technical.";
                 .Select(group => new
                 {
                     TotalNodes = group.Count(),
-                    ActiveNodes = group.Sum(device => device.Status == DeviceStatus.UP ? 1 : 0),
+                    ActiveNodes = group.Sum(device => device.Status == DeviceStatus.UP && !device.IsSimulatedDown ? 1 : 0),
                     DownNodes = group.Sum(device =>
-                        device.Status == DeviceStatus.DOWN || device.Status == DeviceStatus.UNREACHABLE ? 1 : 0)
+                        device.Status == DeviceStatus.DOWN ||
+                        device.Status == DeviceStatus.UNREACHABLE ||
+                        device.IsSimulatedDown ? 1 : 0)
                 })
                 .FirstOrDefaultAsync();
 
@@ -370,6 +380,18 @@ Be concise and technical.";
             return $"{nodeSummary.DownNodes} network nodes are currently down or unreachable. {nodeSummary.ActiveNodes} remain active out of {nodeSummary.TotalNodes} total nodes.";
         }
 
+        private async Task<string> HandleLocationNodesIntentAsync(string userMessage)
+        {
+            var location = ExtractLocationFromNodeQuery(userMessage);
+            if (string.IsNullOrWhiteSpace(location))
+            {
+                return "Please include the location name. Example: how many nodes in Colombo.";
+            }
+
+            var summary = await GetLocationNodeSummaryAsync(location);
+            return BuildLocationNodeSummaryResponse(summary, DetectNodeStatusFilter(userMessage));
+        }
+
         private async Task<string> HandleActiveAlarmsIntentAsync(string userMessage)
         {
             var snapshot = await GetAlarmSnapshotAsync(criticalOnly: false, AlarmPreviewLimit);
@@ -450,9 +472,23 @@ Be concise and technical.";
             return BuildImpactedDevicesResponse(alarmId.Value, impactedDevices);
         }
 
+        private async Task<string> HandleDatabaseLookupIntentAsync(string userMessage)
+        {
+            var table = DetectDatabaseTable(userMessage);
+            if (table == null)
+            {
+                var overview = await GetDatabaseOverviewAsync();
+                return BuildDatabaseOverviewResponse(overview);
+            }
+
+            var preview = await GetDatabaseTablePreviewAsync(table.Value, DatabasePreviewLimit);
+            return BuildDatabaseTablePreviewResponse(table.Value, preview, WantsCountOnly(userMessage));
+        }
+
         private async Task<string> GenerateGeneralResponseAsync(string userMessage)
         {
-            var prompt = $"{GeneralSystemPrompt}\n\nUser: {userMessage}\nAssistant:";
+            var databaseContext = await BuildCompactDatabaseContextAsync();
+            var prompt = $"{GeneralSystemPrompt}\n\nLive read-only database context:\n{databaseContext}\n\nUser: {userMessage}\nAssistant:";
             return await RequestOllamaResponseAsync(prompt);
         }
 
@@ -500,7 +536,7 @@ Be concise and technical.";
             var query = _dbContext.Devices.AsNoTracking();
 
             query = activeOnly
-                ? query.Where(device => device.Status == DeviceStatus.UP)
+                ? query.Where(device => device.Status == DeviceStatus.UP && !device.IsSimulatedDown)
                 : query.Where(device =>
                     device.Status == DeviceStatus.DOWN ||
                     device.Status == DeviceStatus.UNREACHABLE ||
@@ -521,6 +557,341 @@ Be concise and technical.";
                 .ToListAsync();
 
             return new DeviceSnapshot(totalCount, rows);
+        }
+
+        private async Task<LocationNodeSummary> GetLocationNodeSummaryAsync(string location)
+        {
+            var cleanedLocation = CleanupExtractedValue(location);
+            var normalizedLocation = NormalizeLookupValue(cleanedLocation);
+            var locationPattern = $"%{normalizedLocation}%";
+
+            var query =
+                from device in _dbContext.Devices.AsNoTracking()
+                join lea in _dbContext.LEAs.AsNoTracking() on device.LEAId equals lea.LEAId
+                join province in _dbContext.Provinces.AsNoTracking() on lea.ProvinceId equals province.ProvinceId
+                join region in _dbContext.Regions.AsNoTracking() on province.RegionId equals region.RegionId
+                where EF.Functions.Like(device.DeviceName.ToLower(), locationPattern) ||
+                      EF.Functions.Like(lea.Name.ToLower(), locationPattern) ||
+                      EF.Functions.Like(province.Name.ToLower(), locationPattern) ||
+                      EF.Functions.Like(region.Name.ToLower(), locationPattern)
+                select device;
+
+            var summary = await query
+                .GroupBy(_ => 1)
+                .Select(group => new
+                {
+                    TotalNodes = group.Count(),
+                    ActiveNodes = group.Sum(device => device.Status == DeviceStatus.UP && !device.IsSimulatedDown ? 1 : 0),
+                    DownNodes = group.Sum(device =>
+                        device.Status == DeviceStatus.DOWN ||
+                        device.Status == DeviceStatus.UNREACHABLE ||
+                        device.IsSimulatedDown ? 1 : 0)
+                })
+                .FirstOrDefaultAsync();
+
+            return summary == null
+                ? new LocationNodeSummary(cleanedLocation, 0, 0, 0)
+                : new LocationNodeSummary(cleanedLocation, summary.TotalNodes, summary.ActiveNodes, summary.DownNodes);
+        }
+
+        private async Task<IReadOnlyList<TableCountSummary>> GetDatabaseOverviewAsync()
+        {
+            var tableCounts = new List<TableCountSummary>();
+
+            foreach (var table in Enum.GetValues<DatabaseTable>())
+            {
+                tableCounts.Add(new TableCountSummary(GetDatabaseTableDisplayName(table), await GetDatabaseTableCountAsync(table)));
+            }
+
+            return tableCounts;
+        }
+
+        private async Task<int> GetDatabaseTableCountAsync(DatabaseTable table)
+        {
+            try
+            {
+                return table switch
+                {
+                    DatabaseTable.Devices => await _dbContext.Devices.AsNoTracking().CountAsync(),
+                    DatabaseTable.Alarms => await _dbContext.Alarms.AsNoTracking().CountAsync(),
+                    DatabaseTable.DeviceLinks => await _dbContext.DeviceLinks.AsNoTracking().CountAsync(),
+                    DatabaseTable.Regions => await _dbContext.Regions.AsNoTracking().CountAsync(),
+                    DatabaseTable.Provinces => await _dbContext.Provinces.AsNoTracking().CountAsync(),
+                    DatabaseTable.LEAs => await _dbContext.LEAs.AsNoTracking().CountAsync(),
+                    DatabaseTable.Users => await _dbContext.Users.AsNoTracking().CountAsync(),
+                    DatabaseTable.Roles => await _dbContext.Roles.AsNoTracking().CountAsync(),
+                    DatabaseTable.UserAreaAssignments => await _dbContext.UserAreaAssignments.AsNoTracking().CountAsync(),
+                    DatabaseTable.AccountRequests => await _dbContext.AccountRequests.AsNoTracking().CountAsync(),
+                    DatabaseTable.Heartbeats => await _dbContext.Heartbeats.AsNoTracking().CountAsync(),
+                    DatabaseTable.SimulationEvents => await _dbContext.SimulationEvents.AsNoTracking().CountAsync(),
+                    DatabaseTable.RootCauses => await _dbContext.RootCauses.AsNoTracking().CountAsync(),
+                    DatabaseTable.ImpactedDevices => await _dbContext.ImpactedDevices.AsNoTracking().CountAsync(),
+                    DatabaseTable.NetworkNodes => await _dbContext.NetworkNodes.AsNoTracking().CountAsync(),
+                    DatabaseTable.Customers => await _dbContext.Customers.AsNoTracking().CountAsync(),
+                    DatabaseTable.FailureEvents => await _dbContext.FailureEvents.AsNoTracking().CountAsync(),
+                    _ => 0
+                };
+            }
+            catch (Exception ex) when (IsMissingDatabaseObjectException(ex))
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Database table {TableName} is configured in the EF model but is not present in the current database schema.",
+                    GetDatabaseTableDisplayName(table));
+                return -1;
+            }
+        }
+
+        private async Task<TablePreview> GetDatabaseTablePreviewAsync(DatabaseTable table, int limit)
+        {
+            var totalCount = await GetDatabaseTableCountAsync(table);
+            if (totalCount < 0)
+            {
+                return new TablePreview(
+                    totalCount,
+                    [$"{GetDatabaseTableDisplayName(table)} is configured in the backend model but is not present in the current database schema."]);
+            }
+
+            var rows = table switch
+            {
+                DatabaseTable.Devices => await GetDeviceTableRowsAsync(limit),
+                DatabaseTable.Alarms => await GetAlarmTableRowsAsync(limit),
+                DatabaseTable.DeviceLinks => await GetDeviceLinkTableRowsAsync(limit),
+                DatabaseTable.Regions => await _dbContext.Regions
+                    .AsNoTracking()
+                    .OrderBy(region => region.Name)
+                    .Take(limit)
+                    .Select(region => $"Region {region.RegionId}: {region.Name} | Description {region.Description ?? "None"}")
+                    .ToListAsync(),
+                DatabaseTable.Provinces => await GetProvinceTableRowsAsync(limit),
+                DatabaseTable.LEAs => await GetLeaTableRowsAsync(limit),
+                DatabaseTable.Users => await GetUserTableRowsAsync(limit),
+                DatabaseTable.Roles => await _dbContext.Roles
+                    .AsNoTracking()
+                    .OrderBy(role => role.RoleId)
+                    .Take(limit)
+                    .Select(role => $"Role {role.RoleId}: {role.RoleName} | Description {role.Description ?? "None"}")
+                    .ToListAsync(),
+                DatabaseTable.UserAreaAssignments => await GetUserAreaAssignmentRowsAsync(limit),
+                DatabaseTable.AccountRequests => await GetAccountRequestRowsAsync(limit),
+                DatabaseTable.Heartbeats => await GetHeartbeatRowsAsync(limit),
+                DatabaseTable.SimulationEvents => await GetSimulationEventRowsAsync(limit),
+                DatabaseTable.RootCauses => await GetRootCauseRowsAsync(limit),
+                DatabaseTable.ImpactedDevices => await GetImpactedDeviceRowsAsync(limit),
+                DatabaseTable.NetworkNodes => await _dbContext.NetworkNodes
+                    .AsNoTracking()
+                    .OrderBy(node => node.Name)
+                    .Take(limit)
+                    .Select(node => $"NetworkNode {node.Id}: {node.Name} | Type {node.Type} | Status {node.Status}")
+                    .ToListAsync(),
+                DatabaseTable.Customers => await GetCustomerRowsAsync(limit),
+                DatabaseTable.FailureEvents => await GetFailureEventRowsAsync(limit),
+                _ => []
+            };
+
+            return new TablePreview(totalCount, rows);
+        }
+
+        private async Task<IReadOnlyList<string>> GetDeviceTableRowsAsync(int limit)
+        {
+            return await (
+                from device in _dbContext.Devices.AsNoTracking()
+                join lea in _dbContext.LEAs.AsNoTracking() on device.LEAId equals lea.LEAId into leaGroup
+                from lea in leaGroup.DefaultIfEmpty()
+                join province in _dbContext.Provinces.AsNoTracking() on lea == null ? 0 : lea.ProvinceId equals province.ProvinceId into provinceGroup
+                from province in provinceGroup.DefaultIfEmpty()
+                join region in _dbContext.Regions.AsNoTracking() on province == null ? 0 : province.RegionId equals region.RegionId into regionGroup
+                from region in regionGroup.DefaultIfEmpty()
+                orderby device.DeviceName
+                select $"Device {device.DeviceId}: {device.DeviceName} | Type {device.DeviceType} | Status {device.Status} | Priority {device.PriorityLevel} | IP {device.IP} | LEA {(lea == null ? device.LEAId.ToString() : lea.Name)} | Province {(province == null ? "Unknown" : province.Name)} | Region {(region == null ? "Unknown" : region.Name)} | SimulatedDown {device.IsSimulatedDown}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetAlarmTableRowsAsync(int limit)
+        {
+            return await (
+                from alarm in _dbContext.Alarms.AsNoTracking()
+                join device in _dbContext.Devices.AsNoTracking() on alarm.DeviceId equals device.DeviceId into deviceGroup
+                from device in deviceGroup.DefaultIfEmpty()
+                orderby alarm.RaisedTime descending
+                select $"Alarm {alarm.AlarmId}: Device {(device == null ? alarm.DeviceId.ToString() : device.DeviceName)} | Type {alarm.AlarmType} | Active {alarm.IsActive} | Raised {FormatUtc(alarm.RaisedTime)} | Cleared {(alarm.ClearedTime.HasValue ? FormatUtc(alarm.ClearedTime.Value) : "None")}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetDeviceLinkTableRowsAsync(int limit)
+        {
+            return await (
+                from link in _dbContext.DeviceLinks.AsNoTracking()
+                join parentDevice in _dbContext.Devices.AsNoTracking() on link.ParentDeviceId equals parentDevice.DeviceId into parentGroup
+                from parentDevice in parentGroup.DefaultIfEmpty()
+                join childDevice in _dbContext.Devices.AsNoTracking() on link.ChildDeviceId equals childDevice.DeviceId into childGroup
+                from childDevice in childGroup.DefaultIfEmpty()
+                orderby link.LinkId
+                select $"Link {link.LinkId}: Parent {(parentDevice == null ? link.ParentDeviceId.ToString() : parentDevice.DeviceName)} -> Child {(childDevice == null ? link.ChildDeviceId.ToString() : childDevice.DeviceName)} | Status {link.LinkStatus}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetProvinceTableRowsAsync(int limit)
+        {
+            return await (
+                from province in _dbContext.Provinces.AsNoTracking()
+                join region in _dbContext.Regions.AsNoTracking() on province.RegionId equals region.RegionId into regionGroup
+                from region in regionGroup.DefaultIfEmpty()
+                orderby province.Name
+                select $"Province {province.ProvinceId}: {province.Name} | Region {(region == null ? province.RegionId.ToString() : region.Name)}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetLeaTableRowsAsync(int limit)
+        {
+            return await (
+                from lea in _dbContext.LEAs.AsNoTracking()
+                join province in _dbContext.Provinces.AsNoTracking() on lea.ProvinceId equals province.ProvinceId into provinceGroup
+                from province in provinceGroup.DefaultIfEmpty()
+                join region in _dbContext.Regions.AsNoTracking() on province == null ? 0 : province.RegionId equals region.RegionId into regionGroup
+                from region in regionGroup.DefaultIfEmpty()
+                orderby lea.Name
+                select $"LEA {lea.LEAId}: {lea.Name} | Province {(province == null ? lea.ProvinceId.ToString() : province.Name)} | Region {(region == null ? "Unknown" : region.Name)}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetUserTableRowsAsync(int limit)
+        {
+            return await (
+                from user in _dbContext.Users.AsNoTracking()
+                join role in _dbContext.Roles.AsNoTracking() on user.RoleId equals role.RoleId into roleGroup
+                from role in roleGroup.DefaultIfEmpty()
+                orderby user.UserId
+                select $"User {user.UserId}: {user.Username} | FullName {user.FullName} | ServiceId {user.ServiceId ?? "None"} | Email {user.Email ?? "None"} | Role {(role == null ? user.RoleId.ToString() : role.RoleName)}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetUserAreaAssignmentRowsAsync(int limit)
+        {
+            return await (
+                from assignment in _dbContext.UserAreaAssignments.AsNoTracking()
+                join user in _dbContext.Users.AsNoTracking() on assignment.UserId equals user.UserId into userGroup
+                from user in userGroup.DefaultIfEmpty()
+                orderby assignment.AssignmentId
+                select $"Assignment {assignment.AssignmentId}: User {(user == null ? assignment.UserId.ToString() : user.Username)} | AreaType {assignment.AreaType} | AreaId {assignment.AreaId}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetAccountRequestRowsAsync(int limit)
+        {
+            return await (
+                from request in _dbContext.AccountRequests.AsNoTracking()
+                join role in _dbContext.Roles.AsNoTracking() on request.RoleId equals role.RoleId into roleGroup
+                from role in roleGroup.DefaultIfEmpty()
+                join region in _dbContext.Regions.AsNoTracking() on request.RegionId equals region.RegionId into regionGroup
+                from region in regionGroup.DefaultIfEmpty()
+                join province in _dbContext.Provinces.AsNoTracking() on request.ProvinceId equals province.ProvinceId into provinceGroup
+                from province in provinceGroup.DefaultIfEmpty()
+                join lea in _dbContext.LEAs.AsNoTracking() on request.LEAId equals lea.LEAId into leaGroup
+                from lea in leaGroup.DefaultIfEmpty()
+                orderby request.RequestedAt descending
+                select $"Request {request.RequestId}: {request.FullName} | Email {request.Email} | ServiceId {request.ServiceId} | Role {(role == null ? request.RoleId.ToString() : role.RoleName)} | Region {(region == null ? request.RegionId.ToString() : region.Name)} | Province {(province == null ? "None" : province.Name)} | LEA {(lea == null ? "None" : lea.Name)} | Status {request.Status} | Requested {FormatUtc(request.RequestedAt)}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetHeartbeatRowsAsync(int limit)
+        {
+            return await (
+                from heartbeat in _dbContext.Heartbeats.AsNoTracking()
+                join device in _dbContext.Devices.AsNoTracking() on heartbeat.DeviceId equals device.DeviceId into deviceGroup
+                from device in deviceGroup.DefaultIfEmpty()
+                orderby heartbeat.Timestamp descending
+                select $"Heartbeat {heartbeat.HeartbeatId}: Device {(device == null ? heartbeat.DeviceId.ToString() : device.DeviceName)} | Status {heartbeat.Status} | Timestamp {FormatUtc(heartbeat.Timestamp)}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetSimulationEventRowsAsync(int limit)
+        {
+            return await (
+                from simulationEvent in _dbContext.SimulationEvents.AsNoTracking()
+                join device in _dbContext.Devices.AsNoTracking() on simulationEvent.DeviceId equals device.DeviceId into deviceGroup
+                from device in deviceGroup.DefaultIfEmpty()
+                orderby simulationEvent.EventTime descending
+                select $"SimulationEvent {simulationEvent.EventId}: Device {(device == null ? simulationEvent.DeviceId.ToString() : device.DeviceName)} | Type {simulationEvent.EventType} | Time {FormatUtc(simulationEvent.EventTime)}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetRootCauseRowsAsync(int limit)
+        {
+            return await (
+                from rootCause in _dbContext.RootCauses.AsNoTracking()
+                join device in _dbContext.Devices.AsNoTracking() on rootCause.RootCauseDeviceId equals device.DeviceId into deviceGroup
+                from device in deviceGroup.DefaultIfEmpty()
+                orderby rootCause.DetectedTime descending
+                select $"RootCause {rootCause.RootCauseId}: Alarm {rootCause.AlarmId} | Device {(device == null ? rootCause.RootCauseDeviceId.ToString() : device.DeviceName)} | Type {rootCause.RootCauseType} | Detected {FormatUtc(rootCause.DetectedTime)}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetImpactedDeviceRowsAsync(int limit)
+        {
+            return await (
+                from impactedDevice in _dbContext.ImpactedDevices.AsNoTracking()
+                join device in _dbContext.Devices.AsNoTracking() on impactedDevice.DeviceId equals device.DeviceId into deviceGroup
+                from device in deviceGroup.DefaultIfEmpty()
+                orderby impactedDevice.ImpactId
+                select $"Impact {impactedDevice.ImpactId}: RootCause {impactedDevice.RootCauseId} | Device {(device == null ? impactedDevice.DeviceId.ToString() : device.DeviceName)} | ImpactType {impactedDevice.ImpactType}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetCustomerRowsAsync(int limit)
+        {
+            return await (
+                from customer in _dbContext.Customers.AsNoTracking()
+                join node in _dbContext.NetworkNodes.AsNoTracking() on customer.MSANId equals node.Id into nodeGroup
+                from node in nodeGroup.DefaultIfEmpty()
+                orderby customer.Name
+                select $"Customer {customer.Id}: {customer.Name} | MSAN {(node == null ? customer.MSANId.ToString() : node.Name)}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<string>> GetFailureEventRowsAsync(int limit)
+        {
+            return await (
+                from failureEvent in _dbContext.FailureEvents.AsNoTracking()
+                join node in _dbContext.NetworkNodes.AsNoTracking() on failureEvent.NodeId equals node.Id into nodeGroup
+                from node in nodeGroup.DefaultIfEmpty()
+                orderby failureEvent.Timestamp descending
+                select $"FailureEvent {failureEvent.Id}: Node {(node == null ? failureEvent.NodeId.ToString() : node.Name)} | Severity {failureEvent.Severity} | Time {FormatUtc(failureEvent.Timestamp)} | Description {failureEvent.Description}")
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private async Task<string> BuildCompactDatabaseContextAsync()
+        {
+            var overview = await GetDatabaseOverviewAsync();
+            var nodeSummary = await GetActiveNodeCountAsync();
+            var activeAlarmCount = await _dbContext.Alarms.AsNoTracking().CountAsync(alarm => alarm.IsActive);
+            var builder = new StringBuilder();
+
+            builder.AppendLine($"Devices: total={nodeSummary.TotalNodes}, active={nodeSummary.ActiveNodes}, downOrUnreachable={nodeSummary.DownNodes}");
+            builder.AppendLine($"ActiveAlarms: {activeAlarmCount}");
+            builder.AppendLine("TableCounts:");
+            foreach (var tableCount in overview)
+            {
+                builder.AppendLine(tableCount.Count < 0
+                    ? $"- {tableCount.TableName}: not present in current database"
+                    : $"- {tableCount.TableName}: {tableCount.Count}");
+            }
+
+            return builder.ToString().TrimEnd();
         }
 
         private async Task<string> RequestOllamaResponseAsync(string prompt)
@@ -554,6 +925,11 @@ Be concise and technical.";
         private static ChatIntent DetectIntent(string userMessage)
         {
             var normalized = userMessage.ToLowerInvariant();
+
+            if (ExtractLocationFromNodeQuery(userMessage) != null)
+            {
+                return ChatIntent.LocationNodes;
+            }
 
             if (ContainsAny(normalized,
                     "total nodes",
@@ -598,7 +974,8 @@ Be concise and technical.";
                     "active nodes keeyada",
                     "active devices keeyada",
                     "up nodes keeyada",
-                    "online nodes keeyada"))
+                    "online nodes keeyada") ||
+                IsActiveNodeQuery(normalized))
             {
                 return ChatIntent.ActiveNodes;
             }
@@ -623,7 +1000,8 @@ Be concise and technical.";
                     "offline nodes keeyada",
                     "offline devices keeyada",
                     "down nodes tika",
-                    "down devices tika"))
+                    "down devices tika") ||
+                IsDownNodeQuery(normalized))
             {
                 return ChatIntent.DownNodes;
             }
@@ -709,6 +1087,11 @@ Be concise and technical.";
                 (normalized.Contains("critical") && normalized.Contains("alarm")))
             {
                 return ChatIntent.CriticalAlarms;
+            }
+
+            if (IsDatabaseLookupQuery(normalized))
+            {
+                return ChatIntent.DatabaseLookup;
             }
 
             return ChatIntent.General;
@@ -913,6 +1296,8 @@ Be concise and technical.";
                 "faults",
                 "failure",
                 "failures",
+                "failture",
+                "failtures",
                 "outage",
                 "status",
                 "health",
@@ -929,6 +1314,232 @@ Be concise and technical.";
                 "simulate",
                 "critical",
                 "priority");
+        }
+
+        private static bool IsDatabaseLookupQuery(string normalized)
+        {
+            if (ContainsAny(normalized,
+                    "database",
+                    "db",
+                    "tables",
+                    "table list",
+                    "schema",
+                    "records",
+                    "all data",
+                    "full data"))
+            {
+                return true;
+            }
+
+            var table = DetectDatabaseTable(normalized);
+            if (table == null)
+            {
+                return false;
+            }
+
+            if (table == DatabaseTable.Alarms &&
+                ContainsAny(normalized, "active alarm", "current alarm", "open alarm", "critical alarm"))
+            {
+                return false;
+            }
+
+            return ContainsAny(normalized,
+                "show",
+                "list",
+                "count",
+                "how many",
+                "total",
+                "details",
+                "display",
+                "view",
+                "get",
+                "give",
+                "all") ||
+                normalized.Trim().Equals(GetDatabaseTableDisplayName(table.Value).ToLowerInvariant(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool WantsCountOnly(string userMessage)
+        {
+            return ContainsAny(userMessage,
+                    "count",
+                    "how many",
+                    "total",
+                    "number of",
+                    "ganana",
+                    "keeyada") &&
+                !WantsList(userMessage);
+        }
+
+        private static DatabaseTable? DetectDatabaseTable(string userMessage)
+        {
+            var normalized = userMessage.ToLowerInvariant();
+
+            if (ContainsAny(normalized, "user area assignment", "user area assignments", "area assignment", "area assignments"))
+            {
+                return DatabaseTable.UserAreaAssignments;
+            }
+
+            if (ContainsAny(normalized, "account request", "account requests", "request table", "requests"))
+            {
+                return DatabaseTable.AccountRequests;
+            }
+
+            if (ContainsAny(normalized, "simulation event", "simulation events", "simulation table"))
+            {
+                return DatabaseTable.SimulationEvents;
+            }
+
+            if (ContainsAny(normalized, "failure event", "failure events", "failure table"))
+            {
+                return DatabaseTable.FailureEvents;
+            }
+
+            if (ContainsAny(normalized, "network node", "network nodes", "networknode"))
+            {
+                return DatabaseTable.NetworkNodes;
+            }
+
+            if (ContainsAny(normalized, "root cause", "root causes", "rootcause"))
+            {
+                return DatabaseTable.RootCauses;
+            }
+
+            if (ContainsAny(normalized, "impacted device", "impacted devices", "impact table", "impacts"))
+            {
+                return DatabaseTable.ImpactedDevices;
+            }
+
+            if (ContainsAny(normalized, "device link", "device links", "link table", "links", "topology links"))
+            {
+                return DatabaseTable.DeviceLinks;
+            }
+
+            if (ContainsAny(normalized, "heartbeat", "heartbeats"))
+            {
+                return DatabaseTable.Heartbeats;
+            }
+
+            if (ContainsAny(normalized, "province", "provinces"))
+            {
+                return DatabaseTable.Provinces;
+            }
+
+            if (ContainsAny(normalized, "region", "regions"))
+            {
+                return DatabaseTable.Regions;
+            }
+
+            if (ContainsAny(normalized, "lea", "leas"))
+            {
+                return DatabaseTable.LEAs;
+            }
+
+            if (ContainsAny(normalized, "customer", "customers"))
+            {
+                return DatabaseTable.Customers;
+            }
+
+            if (ContainsAny(normalized, "role", "roles"))
+            {
+                return DatabaseTable.Roles;
+            }
+
+            if (ContainsAny(normalized, "user", "users", "operator", "operators"))
+            {
+                return DatabaseTable.Users;
+            }
+
+            if (ContainsAny(normalized, "alarm", "alarms"))
+            {
+                return DatabaseTable.Alarms;
+            }
+
+            if (ContainsAny(normalized, "device", "devices", "node", "nodes"))
+            {
+                return DatabaseTable.Devices;
+            }
+
+            return null;
+        }
+
+        private static string GetDatabaseTableDisplayName(DatabaseTable table)
+        {
+            return table switch
+            {
+                DatabaseTable.Devices => "Devices",
+                DatabaseTable.Alarms => "Alarms",
+                DatabaseTable.DeviceLinks => "DeviceLinks",
+                DatabaseTable.Regions => "Regions",
+                DatabaseTable.Provinces => "Provinces",
+                DatabaseTable.LEAs => "LEAs",
+                DatabaseTable.Users => "Users",
+                DatabaseTable.Roles => "Roles",
+                DatabaseTable.UserAreaAssignments => "UserAreaAssignments",
+                DatabaseTable.AccountRequests => "AccountRequests",
+                DatabaseTable.Heartbeats => "Heartbeats",
+                DatabaseTable.SimulationEvents => "SimulationEvents",
+                DatabaseTable.RootCauses => "RootCauses",
+                DatabaseTable.ImpactedDevices => "ImpactedDevices",
+                DatabaseTable.NetworkNodes => "NetworkNodes",
+                DatabaseTable.Customers => "Customers",
+                DatabaseTable.FailureEvents => "FailureEvents",
+                _ => table.ToString()
+            };
+        }
+
+        private static bool IsNodeOrDeviceQuery(string normalized)
+        {
+            return ContainsAny(normalized, "node", "nodes", "device", "devices");
+        }
+
+        private static bool IsActiveNodeQuery(string normalized)
+        {
+            return IsNodeOrDeviceQuery(normalized) &&
+                !ContainsAny(normalized, "not working", "down", "failed", "failure", "failture", "fault", "offline", "unreachable") &&
+                ContainsAny(normalized,
+                    "active",
+                    "reachable",
+                    "up",
+                    "online",
+                    "healthy",
+                    "working",
+                    "running",
+                    "available");
+        }
+
+        private static bool IsDownNodeQuery(string normalized)
+        {
+            return IsNodeOrDeviceQuery(normalized) &&
+                (ContainsAny(normalized,
+                    "down",
+                    "failed",
+                    "failure",
+                    "failures",
+                    "failture",
+                    "failtures",
+                    "fault",
+                    "faulty",
+                    "unreachable",
+                    "offline",
+                    "not working") ||
+                Regex.IsMatch(normalized, @"\bfail(?:ed|ure|ures|ture|tures)?\b", RegexOptions.IgnoreCase));
+        }
+
+        private static NodeStatusFilter DetectNodeStatusFilter(string userMessage)
+        {
+            var normalized = userMessage.ToLowerInvariant();
+
+            if (IsDownNodeQuery(normalized))
+            {
+                return NodeStatusFilter.Down;
+            }
+
+            if (IsActiveNodeQuery(normalized))
+            {
+                return NodeStatusFilter.Active;
+            }
+
+            return NodeStatusFilter.All;
         }
 
         private static bool WantsList(string userMessage)
@@ -950,6 +1561,34 @@ Be concise and technical.";
         private static bool ContainsAny(string value, params string[] phrases)
         {
             return phrases.Any(phrase => value.Contains(phrase, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool IsMissingDatabaseObjectException(Exception ex)
+        {
+            return ex.Message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase) ||
+                ex.InnerException != null && IsMissingDatabaseObjectException(ex.InnerException);
+        }
+
+        private static string? ExtractLocationFromNodeQuery(string userMessage)
+        {
+            var normalized = userMessage.ToLowerInvariant();
+            if (!IsNodeOrDeviceQuery(normalized))
+            {
+                return null;
+            }
+
+            var locationMatch = Regex.Match(
+                userMessage,
+                @"\b(?:in|at|from|near|around)\s+(?<location>[a-z0-9][a-z0-9\s_-]*?)\s*(?:\b(?:are|is|that|which)\b.*)?[?.!]*$",
+                RegexOptions.IgnoreCase);
+
+            if (!locationMatch.Success)
+            {
+                return null;
+            }
+
+            var location = CleanupExtractedValue(locationMatch.Groups["location"].Value);
+            return string.IsNullOrWhiteSpace(location) ? null : location;
         }
 
         private async Task<string?> ExtractDeviceNameAsync(string userMessage)
@@ -1239,6 +1878,75 @@ Be concise and technical.";
             return builder.ToString().TrimEnd();
         }
 
+        private static string BuildLocationNodeSummaryResponse(LocationNodeSummary summary, NodeStatusFilter filter)
+        {
+            if (summary.TotalNodes == 0)
+            {
+                return $"I couldn't find any nodes for '{summary.LocationName}'. Check the LEA, province, region, or device name and try again.";
+            }
+
+            return filter switch
+            {
+                NodeStatusFilter.Active => $"{summary.ActiveNodes} of {summary.TotalNodes} nodes in {summary.LocationName} are active. {summary.DownNodes} are down or unreachable.",
+                NodeStatusFilter.Down => $"{summary.DownNodes} nodes in {summary.LocationName} are down or unreachable. {summary.ActiveNodes} are active out of {summary.TotalNodes} total nodes.",
+                _ => $"There are {summary.TotalNodes} nodes in {summary.LocationName}: {summary.ActiveNodes} active and {summary.DownNodes} down or unreachable."
+            };
+        }
+
+        private static string BuildDatabaseOverviewResponse(IReadOnlyList<TableCountSummary> overview)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine("Chatbot has read-only access to these INMS database tables:");
+
+            foreach (var tableCount in overview)
+            {
+                builder.AppendLine(tableCount.Count < 0
+                    ? $"- {tableCount.TableName}: not present in current database"
+                    : $"- {tableCount.TableName}: {tableCount.Count} records");
+            }
+
+            builder.AppendLine("Ask for a table by name, for example: show users, list devices, count account requests, or show latest heartbeats.");
+            return builder.ToString().TrimEnd();
+        }
+
+        private static string BuildDatabaseTablePreviewResponse(DatabaseTable table, TablePreview preview, bool countOnly)
+        {
+            var tableName = GetDatabaseTableDisplayName(table);
+            if (preview.TotalCount < 0)
+            {
+                return preview.Rows.Count > 0
+                    ? preview.Rows[0]
+                    : $"{tableName} is configured in the backend model but is not present in the current database schema.";
+            }
+
+            var recordLabel = preview.TotalCount == 1 ? "record" : "records";
+
+            if (countOnly)
+            {
+                return $"{tableName} has {preview.TotalCount} {recordLabel}.";
+            }
+
+            if (preview.TotalCount == 0)
+            {
+                return $"{tableName} has no records.";
+            }
+
+            var builder = new StringBuilder();
+            builder.AppendLine($"{tableName} has {preview.TotalCount} {recordLabel}. Showing {preview.Rows.Count}:");
+
+            foreach (var row in preview.Rows)
+            {
+                builder.AppendLine($"- {row}");
+            }
+
+            if (preview.TotalCount > preview.Rows.Count)
+            {
+                builder.AppendLine($"... {preview.TotalCount - preview.Rows.Count} more records not shown.");
+            }
+
+            return builder.ToString().TrimEnd();
+        }
+
         private static string BuildRootCauseResponse(RootCauseSummary rootCause)
         {
             var builder = new StringBuilder();
@@ -1341,6 +2049,20 @@ Be concise and technical.";
             int ActiveAlarmCount,
             DateTime? LatestAlarmRaisedTime);
 
+        private sealed record LocationNodeSummary(
+            string LocationName,
+            int TotalNodes,
+            int ActiveNodes,
+            int DownNodes);
+
+        private sealed record TableCountSummary(
+            string TableName,
+            int Count);
+
+        private sealed record TablePreview(
+            int TotalCount,
+            IReadOnlyList<string> Rows);
+
         public sealed record RootCauseSummary(
             int RootCauseId,
             int AlarmId,
@@ -1385,12 +2107,42 @@ Be concise and technical.";
             TotalNodes,
             ActiveNodes,
             DownNodes,
+            LocationNodes,
             ActiveAlarms,
             NetworkOverview,
             DeviceStatus,
             CriticalAlarms,
             RootCause,
-            ImpactedDevices
+            ImpactedDevices,
+            DatabaseLookup
+        }
+
+        private enum NodeStatusFilter
+        {
+            All,
+            Active,
+            Down
+        }
+
+        private enum DatabaseTable
+        {
+            Devices,
+            Alarms,
+            DeviceLinks,
+            Regions,
+            Provinces,
+            LEAs,
+            Users,
+            Roles,
+            UserAreaAssignments,
+            AccountRequests,
+            Heartbeats,
+            SimulationEvents,
+            RootCauses,
+            ImpactedDevices,
+            NetworkNodes,
+            Customers,
+            FailureEvents
         }
     }
 }

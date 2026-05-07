@@ -3,6 +3,7 @@ import ChatService from '../../services/ChatService';
 
 const STORAGE_KEY = 'inms-chat-history';
 const MAX_HISTORY_MESSAGES = 50;
+const MIN_BOT_RESPONSE_DELAY_MS = 2000;
 
 export const suggestedPrompts = [
   'How many total nodes are there?',
@@ -44,6 +45,19 @@ function loadStoredMessages() {
   }
 }
 
+function waitForMinimumResponseDelay(startedAt) {
+  const elapsed = Date.now() - startedAt;
+  const remainingDelay = MIN_BOT_RESPONSE_DELAY_MS - elapsed;
+
+  if (remainingDelay <= 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, remainingDelay);
+  });
+}
+
 export default function useChatSession() {
   const [messages, setMessages] = useState(() => loadStoredMessages());
   const [inputMessage, setInputMessage] = useState('');
@@ -74,8 +88,12 @@ export default function useChatSession() {
     const nextUserMessage = { type: 'user', content: userMessage };
     setMessages((currentMessages) => normalizeMessages([...currentMessages, nextUserMessage]));
 
+    const requestStartedAt = Date.now();
+
     try {
       const response = await ChatService.sendMessage(userMessage);
+      await waitForMinimumResponseDelay(requestStartedAt);
+
       const botMessage = {
         type: 'bot',
         content: response?.message?.trim() || "I couldn't generate a response right now."
@@ -83,6 +101,8 @@ export default function useChatSession() {
 
       setMessages((currentMessages) => normalizeMessages([...currentMessages, botMessage]));
     } catch {
+      await waitForMinimumResponseDelay(requestStartedAt);
+
       const errorMessage = {
         type: 'bot',
         content: 'Sorry, I encountered an error. Please try again.'
